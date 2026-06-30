@@ -71,7 +71,6 @@ export class OrganizerStateSanitizer {
       folders,
       rootFolderIds,
       expandedFolderIds,
-      new OrganizerSettings(defaultFolderIcon, sortMode, autoRefreshSeconds),
       new OrganizerSettings(sortMode, autoRefreshSeconds, openTarget),
     );
   }

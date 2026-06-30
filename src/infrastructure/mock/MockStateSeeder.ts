@@ -54,7 +54,7 @@ export class MockStateSeeder {
       folders,
       rootFolderIds,
       expandedFolderIds,
-      new OrganizerSettings("mdi:folder-outline", "typeThenName", 60),
+      new OrganizerSettings("typeThenName", 60, "new-tab"),
     );
   }
 }

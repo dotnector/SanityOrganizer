@@ -1,3 +1,6 @@
+/// <summary>
+/// Implements organizer runtime behavior using mock catalog and local browser storage.
+/// </summary>
 import type { OrganizerRuntime } from "../../app/contracts/OrganizerRuntime";
 import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
 import { OrganizerState } from "../../app/domain/OrganizerState";

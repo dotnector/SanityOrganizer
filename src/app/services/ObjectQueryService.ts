@@ -1,3 +1,6 @@
+/// <summary>
+/// Provides filtering, sorting, and folder object resolution for catalog queries.
+/// </summary>
 import { FolderNode } from "../domain/FolderNode";
 import { ObjectCatalog } from "../domain/ObjectCatalog";
 import { ObjectRecord } from "../domain/ObjectRecord";

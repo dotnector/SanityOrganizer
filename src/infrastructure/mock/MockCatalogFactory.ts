@@ -1,3 +1,6 @@
+/// <summary>
+/// Generates mock object catalogs for small, medium, and large development datasets.
+/// </summary>
 import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
 import { ObjectRecord } from "../../app/domain/ObjectRecord";
 import { ObjectType } from "../../app/domain/ObjectType";

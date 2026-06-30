@@ -1,3 +1,6 @@
+/// <summary>
+/// Implements folder tree mutations such as create, move, rename, delete, and object assignment.
+/// </summary>
 import { FolderNode } from "../domain/FolderNode";
 import { FolderObjectRef } from "../domain/FolderObjectRef";
 import { ObjectRecord } from "../domain/ObjectRecord";

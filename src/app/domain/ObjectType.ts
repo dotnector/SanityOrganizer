@@ -1,3 +1,6 @@
+/// <summary>
+/// Defines supported object type constants and the shared object type union.
+/// </summary>
 export class ObjectType {
   public static readonly Device = "device";
   public static readonly Entity = "entity";

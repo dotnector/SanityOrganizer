@@ -1,3 +1,6 @@
+/// <summary>
+/// Loads and saves organizer state through Home Assistant frontend user-data APIs.
+/// </summary>
 import { OrganizerState } from "../domain/OrganizerState";
 import { OrganizerStateSanitizer } from "./OrganizerStateSanitizer";
 import type { HaConnection } from "../../ha/domain/HaConnection";

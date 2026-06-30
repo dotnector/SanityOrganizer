@@ -1,3 +1,6 @@
+/// <summary>
+/// Represents a folder node with hierarchy links and contained object references.
+/// </summary>
 import { FolderObjectRef } from "./FolderObjectRef";
 
 export class FolderNode {

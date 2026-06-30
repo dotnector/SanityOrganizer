@@ -1,3 +1,6 @@
+/// <summary>
+/// Builds the object catalog from Home Assistant registries and current runtime states.
+/// </summary>
 import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
 import { ObjectRecord } from "../../app/domain/ObjectRecord";
 import { ObjectType, type ObjectTypeValue } from "../../app/domain/ObjectType";

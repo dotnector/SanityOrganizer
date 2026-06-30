@@ -1,3 +1,6 @@
+/// <summary>
+/// Validates and normalizes stored data into a safe organizer state instance.
+/// </summary>
 import { FolderNode } from "../domain/FolderNode";
 import { FolderObjectRef } from "../domain/FolderObjectRef";
 import { ObjectType, type ObjectTypeValue } from "../domain/ObjectType";

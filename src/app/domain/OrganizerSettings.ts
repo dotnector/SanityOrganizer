@@ -1,3 +1,6 @@
+/// <summary>
+/// Defines organizer preferences such as icon defaults, sort mode, and refresh interval.
+/// </summary>
 export type SortMode = "typeThenName" | "name";
 
 export class OrganizerSettings {

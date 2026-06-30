@@ -1,3 +1,6 @@
+/// <summary>
+/// Defines the main organizer web component including UI, interactions, and state orchestration.
+/// </summary>
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { OrganizerRuntime } from "./app/contracts/OrganizerRuntime";

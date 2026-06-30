@@ -1,3 +1,6 @@
+/// <summary>
+/// Represents persisted organizer data including folders, expansion state, and settings.
+/// </summary>
 import { FolderNode } from "./FolderNode";
 import { OrganizerSettings } from "./OrganizerSettings";
 

@@ -1,3 +1,6 @@
+/// <summary>
+/// Creates deep copies of organizer state for safe mutation workflows.
+/// </summary>
 import { FolderNode } from "../domain/FolderNode";
 import { FolderObjectRef } from "../domain/FolderObjectRef";
 import { OrganizerSettings } from "../domain/OrganizerSettings";

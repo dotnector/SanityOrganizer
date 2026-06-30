@@ -1,3 +1,6 @@
+/// <summary>
+/// Represents a catalog object with identity, display metadata, and optional details.
+/// </summary>
 import type { ObjectTypeValue } from "./ObjectType";
 
 export class ObjectRecord {

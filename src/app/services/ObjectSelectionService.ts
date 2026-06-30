@@ -1,3 +1,6 @@
+/// <summary>
+/// Implements row selection behavior including range select and toggle select interactions.
+/// </summary>
 export class ObjectSelectionService {
   public onRowClick(
     selectedIds: Set<string>,

@@ -1,3 +1,6 @@
+/// <summary>
+/// Stores object records as both a lookup map and an ordered list for browsing.
+/// </summary>
 import { ObjectRecord } from "./ObjectRecord";
 
 export class ObjectCatalog {

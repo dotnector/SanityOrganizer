@@ -1,3 +1,6 @@
+/// <summary>
+/// Implements organizer runtime operations backed by Home Assistant services.
+/// </summary>
 import type { OrganizerRuntime } from "../../app/contracts/OrganizerRuntime";
 import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
 import { OrganizerState } from "../../app/domain/OrganizerState";

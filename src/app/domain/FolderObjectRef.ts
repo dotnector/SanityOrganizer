@@ -1,3 +1,6 @@
+/// <summary>
+/// Represents a lightweight reference to an object stored inside a folder.
+/// </summary>
 import type { ObjectTypeValue } from "./ObjectType";
 
 export class FolderObjectRef {

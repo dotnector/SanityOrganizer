@@ -1,3 +1,6 @@
+/// <summary>
+/// Persists and restores mock organizer state in browser localStorage with sanitization.
+/// </summary>
 import { OrganizerState } from "../../app/domain/OrganizerState";
 import { OrganizerStateSanitizer } from "../../app/services/OrganizerStateSanitizer";
 

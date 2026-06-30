@@ -1,3 +1,6 @@
+/// <summary>
+/// Seeds initial mock folders and object assignments for local development scenarios.
+/// </summary>
 import { FolderNode } from "../../app/domain/FolderNode";
 import { FolderObjectRef } from "../../app/domain/FolderObjectRef";
 import { ObjectCatalog } from "../../app/domain/ObjectCatalog";

@@ -317,6 +317,16 @@ export class SanityOrganizer extends LitElement {
     if (!folder) {
       return;
     }
+    if (folder.objects.length === 0 && folder.children.length === 0) {
+      let removeIds = new Set<string>();
+      this.mutateState((draft) => {
+        removeIds = this.treeService.deleteFolder(draft, folderId);
+      });
+      if (this.selectedFolderId && removeIds.has(this.selectedFolderId)) {
+        this.selectedFolderId = null;
+      }
+      return;
+    }
     this.confirmDialog = {
       title: "Delete Folder",
       message: `Delete '${folder.name}' and all nested folders?`,

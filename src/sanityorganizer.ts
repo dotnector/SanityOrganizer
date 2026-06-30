@@ -240,7 +240,7 @@ export class SanityOrganizer extends LitElement {
       folderId: null,
       parentId,
       name: "",
-      icon: this.settings.defaultFolderIcon,
+      icon: "mdi:folder-outline",
     };
   }
 
@@ -292,7 +292,7 @@ export class SanityOrganizer extends LitElement {
       return;
     }
     const name = dialog.name.trim();
-    const icon = dialog.icon.trim() || this.settings.defaultFolderIcon;
+    const icon = dialog.icon.trim() || "mdi:folder-outline";
     if (!name) {
       return;
     }
@@ -574,10 +574,12 @@ export class SanityOrganizer extends LitElement {
     });
   }
 
-  private onDefaultIconChange(event: Event): void {
-    const value = (event.target as HTMLInputElement).value.trim() || "mdi:folder-outline";
+  private onOpenTargetChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    const openTarget =
+      value === "this-tab" || value === "same-other-tab" ? value : "new-tab";
     this.mutateState((draft) => {
-      draft.settings.defaultFolderIcon = value;
+      draft.settings.openTarget = openTarget;
     });
   }
 
@@ -806,12 +808,12 @@ export class SanityOrganizer extends LitElement {
                 <div class="pane-title">Panel Settings</div>
                 <div class="settings-grid">
                   <label>
-                    Default folder icon
-                    <input
-                      class="dialog-input"
-                      .value=${this.settings.defaultFolderIcon}
-                      @change=${this.onDefaultIconChange}
-                    />
+                    Open items in
+                    <select class="dialog-input" .value=${this.settings.openTarget} @change=${this.onOpenTargetChange}>
+                      <option value="new-tab">New tab</option>
+                      <option value="this-tab">This tab</option>
+                      <option value="same-other-tab">Same other tab</option>
+                    </select>
                   </label>
                   <label>
                     Sort mode

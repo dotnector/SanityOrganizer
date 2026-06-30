@@ -25,9 +25,9 @@ export class OrganizerStateCloner {
       [...state.rootFolderIds],
       [...state.expandedFolderIds],
       new OrganizerSettings(
-        state.settings.defaultFolderIcon,
         state.settings.sortMode,
         state.settings.autoRefreshSeconds,
+        state.settings.openTarget,
       ),
     );
   }

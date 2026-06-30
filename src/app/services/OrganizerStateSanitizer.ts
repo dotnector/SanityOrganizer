@@ -28,16 +28,16 @@ export class OrganizerStateSanitizer {
       : [];
 
     const rawSettings = this.isObject(value.settings) ? value.settings : {};
-    const defaultFolderIcon =
-      typeof rawSettings.defaultFolderIcon === "string" && rawSettings.defaultFolderIcon.trim().length > 0
-        ? rawSettings.defaultFolderIcon.trim()
-        : defaults.settings.defaultFolderIcon;
     const sortMode = rawSettings.sortMode === "name" ? "name" : defaults.settings.sortMode;
     const autoRefreshSecondsRaw =
       typeof rawSettings.autoRefreshSeconds === "number" && Number.isFinite(rawSettings.autoRefreshSeconds)
         ? Math.round(rawSettings.autoRefreshSeconds)
         : defaults.settings.autoRefreshSeconds;
     const autoRefreshSeconds = Math.max(0, Math.min(600, autoRefreshSecondsRaw));
+    const openTarget =
+      rawSettings.openTarget === "this-tab" || rawSettings.openTarget === "same-other-tab"
+        ? rawSettings.openTarget
+        : defaults.settings.openTarget;
 
     const folders: Record<string, FolderNode> = {};
     for (const [id, rawFolder] of Object.entries(foldersValue)) {
@@ -72,6 +72,7 @@ export class OrganizerStateSanitizer {
       rootFolderIds,
       expandedFolderIds,
       new OrganizerSettings(defaultFolderIcon, sortMode, autoRefreshSeconds),
+      new OrganizerSettings(sortMode, autoRefreshSeconds, openTarget),
     );
   }
 

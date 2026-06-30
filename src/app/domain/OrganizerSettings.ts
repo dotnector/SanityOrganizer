@@ -2,19 +2,21 @@
 /// Defines organizer preferences such as icon defaults, sort mode, and refresh interval.
 /// </summary>
 export type SortMode = "typeThenName" | "name";
+export type OpenTarget = "new-tab" | "this-tab" | "same-other-tab";
+
 
 export class OrganizerSettings {
-  public defaultFolderIcon: string;
   public sortMode: SortMode;
   public autoRefreshSeconds: number;
+  public openTarget: OpenTarget;
 
-  public constructor(defaultFolderIcon: string, sortMode: SortMode, autoRefreshSeconds: number) {
-    this.defaultFolderIcon = defaultFolderIcon;
+  public constructor(sortMode: SortMode, autoRefreshSeconds: number, openTarget: OpenTarget) {
     this.sortMode = sortMode;
     this.autoRefreshSeconds = autoRefreshSeconds;
+    this.openTarget = openTarget;
   }
 
   public static createDefault(): OrganizerSettings {
-    return new OrganizerSettings("mdi:folder-outline", "typeThenName", 60);
+    return new OrganizerSettings("typeThenName", 60, "new-tab");
   }
 }

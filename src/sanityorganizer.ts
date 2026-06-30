@@ -1,5 +1,6 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import type { OrganizerRuntime } from "./app/contracts/OrganizerRuntime";
 import { FolderNode } from "./app/domain/FolderNode";
 import { ObjectCatalog } from "./app/domain/ObjectCatalog";
 import { ObjectRecord } from "./app/domain/ObjectRecord";
@@ -9,11 +10,9 @@ import { ObjectQueryService } from "./app/services/ObjectQueryService";
 import { ObjectSelectionService } from "./app/services/ObjectSelectionService";
 import { OrganizerStateCloner } from "./app/services/OrganizerStateCloner";
 import { OrganizerStateFactory } from "./app/services/OrganizerStateFactory";
-import { OrganizerStorageService } from "./app/services/OrganizerStorageService";
 import { OrganizerTreeService } from "./app/services/OrganizerTreeService";
 import type { HaConnection } from "./ha/domain/HaConnection";
-import { HaCatalogService } from "./ha/services/HaCatalogService";
-import { HaRuntimeConnection } from "./ha/services/HaRuntimeConnection";
+import { RuntimeResolver } from "./infrastructure/RuntimeResolver";
 
 type DragPayload =
   | { kind: "folder"; folderId: string }
@@ -49,6 +48,7 @@ function uid(prefix: string): string {
 @customElement("sanity-organizer")
 export class SanityOrganizer extends LitElement {
   @property({ attribute: false }) public hass?: HaConnection;
+  @property({ attribute: false }) public runtime?: OrganizerRuntime;
 
   @state() private organizerState: OrganizerState = new OrganizerStateFactory().createInitial();
   @state() private catalog: ObjectCatalog = new ObjectCatalog(new Map(), []);
@@ -72,8 +72,7 @@ export class SanityOrganizer extends LitElement {
   private readonly treeService = new OrganizerTreeService();
   private readonly queryService = new ObjectQueryService();
   private readonly selectionService = new ObjectSelectionService();
-  private storageService: OrganizerStorageService | null = null;
-  private catalogService: HaCatalogService | null = null;
+  private readonly runtimeResolver = new RuntimeResolver();
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -87,10 +86,12 @@ export class SanityOrganizer extends LitElement {
   }
 
   protected override async updated(changedProps: Map<string, unknown>): Promise<void> {
-    if (changedProps.has("hass") && this.hass && !this.initialized) {
-      const runtime = new HaRuntimeConnection(this.hass);
-      this.storageService = new OrganizerStorageService(runtime);
-      this.catalogService = new HaCatalogService(runtime);
+    if (changedProps.has("hass") && this.hass && !this.runtime) {
+      this.runtime = this.runtimeResolver.resolveFromHass(this.hass);
+      return;
+    }
+
+    if (changedProps.has("runtime") && this.runtime && !this.initialized) {
       this.initialized = true;
       await this.initializePanel();
       this.applyRefreshTimer(this.settings.autoRefreshSeconds);
@@ -114,15 +115,15 @@ export class SanityOrganizer extends LitElement {
   }
 
   private async initializePanel(): Promise<void> {
-    if (!this.storageService || !this.catalogService) {
+    if (!this.runtime) {
       return;
     }
     this.loading = true;
     this.errorText = "";
     try {
       const [storedState, catalog] = await Promise.all([
-        this.storageService.load(),
-        this.catalogService.loadObjectCatalog(),
+        this.runtime.loadState(),
+        this.runtime.loadObjectCatalog(),
       ]);
       this.organizerState = storedState;
       this.catalog = catalog;
@@ -135,11 +136,11 @@ export class SanityOrganizer extends LitElement {
   }
 
   private async refreshCatalog(): Promise<void> {
-    if (!this.catalogService) {
+    if (!this.runtime) {
       return;
     }
     try {
-      this.catalog = await this.catalogService.loadObjectCatalog();
+      this.catalog = await this.runtime.loadObjectCatalog();
     } catch {
       // Keep the latest good catalog when background refresh fails.
     }
@@ -147,12 +148,12 @@ export class SanityOrganizer extends LitElement {
 
   private async persistState(nextState: OrganizerState): Promise<void> {
     this.organizerState = nextState;
-    if (!this.storageService) {
+    if (!this.runtime) {
       return;
     }
     this.saving = true;
     try {
-      await this.storageService.save(nextState);
+      await this.runtime.saveState(nextState);
       this.errorText = "";
     } catch (error) {
       this.errorText = `Failed to persist changes: ${error instanceof Error ? error.message : String(error)}`;

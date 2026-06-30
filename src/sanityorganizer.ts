@@ -13,6 +13,7 @@ import { OrganizerStateFactory } from "./app/services/OrganizerStateFactory";
 import { OrganizerTreeService } from "./app/services/OrganizerTreeService";
 import type { HaConnection } from "./ha/domain/HaConnection";
 import { RuntimeResolver } from "./infrastructure/RuntimeResolver";
+import { HomeAssistantOrganizerRuntime } from "./infrastructure/homeassistant/HomeAssistantOrganizerRuntime";
 
 type DragPayload =
   | { kind: "folder"; folderId: string }
@@ -36,9 +37,26 @@ type ContextAction =
   | { type: "rename-folder"; folderId: string }
   | { type: "delete-folder"; folderId: string }
   | { type: "add-folder"; folderId: string | null }
+  | { type: "add-subfolder"; folderId: string }
+  | { type: "add-root-folder" }
   | { type: "remove-object"; folderId: string; objectId: string };
 
 const ROOT_DROP_ID = "__root__";
+const FALLBACK_MDI_PATHS: Record<string, string> = {
+  "mdi:folder-outline": "M20,18H4V8H20M20,6H12L10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6Z",
+  "mdi:magnify": "M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z",
+  "mdi:close": "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+  "mdi:devices": "M3 6H21V4H3C1.9 4 1 4.9 1 6V18C1 19.1 1.9 20 3 20H7V18H3V6M13 12H9V13.78C8.39 14.33 8 15.11 8 16C8 16.89 8.39 17.67 9 18.22V20H13V18.22C13.61 17.67 14 16.88 14 16S13.61 14.33 13 13.78V12M11 17.5C10.17 17.5 9.5 16.83 9.5 16S10.17 14.5 11 14.5 12.5 15.17 12.5 16 11.83 17.5 11 17.5M22 8H16C15.5 8 15 8.5 15 9V19C15 19.5 15.5 20 16 20H22C22.5 20 23 19.5 23 19V9C23 8.5 22.5 8 22 8M21 18H17V10H21V18Z",
+  "mdi:shape-outline": "M11,13.5V21.5H3V13.5H11M9,15.5H5V19.5H9V15.5M12,2L17.5,11H6.5L12,2M12,5.86L10.08,9H13.92L12,5.86M17.5,13C20,13 22,15 22,17.5C22,20 20,22 17.5,22C15,22 13,20 13,17.5C13,15 15,13 17.5,13M17.5,15A2.5,2.5 0 0,0 15,17.5A2.5,2.5 0 0,0 17.5,20A2.5,2.5 0 0,0 20,17.5A2.5,2.5 0 0,0 17.5,15Z",
+  "mdi:tune-variant": "M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M8 19C6.9 19 6 18.1 6 17C6 15.9 6.9 15 8 15S10 15.9 10 17C10 18.1 9.1 19 8 19M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86M16 9C14.9 9 14 8.1 14 7C14 5.9 14.9 5 16 5S18 5.9 18 7C18 8.1 17.1 9 16 9Z",
+  "mdi:robot": "M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H14A7,7 0 0,1 21,14H22A1,1 0 0,1 23,15V18A1,1 0 0,1 22,19H21V20A2,2 0 0,1 19,22H5A2,2 0 0,1 3,20V19H2A1,1 0 0,1 1,18V15A1,1 0 0,1 2,14H3A7,7 0 0,1 10,7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M7.5,13A2.5,2.5 0 0,0 5,15.5A2.5,2.5 0 0,0 7.5,18A2.5,2.5 0 0,0 10,15.5A2.5,2.5 0 0,0 7.5,13M16.5,13A2.5,2.5 0 0,0 14,15.5A2.5,2.5 0 0,0 16.5,18A2.5,2.5 0 0,0 19,15.5A2.5,2.5 0 0,0 16.5,13Z",
+  "mdi:script-text-outline": "M15,20A1,1 0 0,0 16,19V4H8A1,1 0 0,0 7,5V16H5V5A3,3 0 0,1 8,2H19A3,3 0 0,1 22,5V6H20V5A1,1 0 0,0 19,4A1,1 0 0,0 18,5V9L18,19A3,3 0 0,1 15,22H5A3,3 0 0,1 2,19V18H13A2,2 0 0,0 15,20M9,6H14V8H9V6M9,10H14V12H9V10M9,14H14V16H9V14Z",
+  "mdi:palette-outline": "M12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2C17.5,2 22,6 22,11A6,6 0 0,1 16,17H14.2C13.9,17 13.7,17.2 13.7,17.5C13.7,17.6 13.8,17.7 13.8,17.8C14.2,18.3 14.4,18.9 14.4,19.5C14.5,20.9 13.4,22 12,22M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C12.3,20 12.5,19.8 12.5,19.5C12.5,19.3 12.4,19.2 12.4,19.1C12,18.6 11.8,18.1 11.8,17.5C11.8,16.1 12.9,15 14.3,15H16A4,4 0 0,0 20,11C20,7.1 16.4,4 12,4M6.5,10C7.3,10 8,10.7 8,11.5C8,12.3 7.3,13 6.5,13C5.7,13 5,12.3 5,11.5C5,10.7 5.7,10 6.5,10M9.5,6C10.3,6 11,6.7 11,7.5C11,8.3 10.3,9 9.5,9C8.7,9 8,8.3 8,7.5C8,6.7 8.7,6 9.5,6M14.5,6C15.3,6 16,6.7 16,7.5C16,8.3 15.3,9 14.5,9C13.7,9 13,8.3 13,7.5C13,6.7 13.7,6 14.5,6M17.5,10C18.3,10 19,10.7 19,11.5C19,12.3 18.3,13 17.5,13C16.7,13 16,12.3 16,11.5C16,10.7 16.7,10 17.5,10Z",
+  "mdi:star-outline": "M12,15.39L8.24,17.66L9.23,13.38L5.91,10.5L10.29,10.13L12,6.09L13.71,10.13L18.09,10.5L14.77,13.38L15.76,17.66M22,9.24L14.81,8.63L12,2L9.19,8.63L2,9.24L7.45,13.97L5.82,21L12,17.27L18.18,21L16.54,13.97L22,9.24Z",
+  "mdi:silverware-fork-knife": "M11,9H9V2H7V9H5V2H3V9C3,11.12 4.66,12.84 6.75,12.97V22H9.25V12.97C11.34,12.84 13,11.12 13,9V2H11V9M16,6V14H18.5V22H21V2C18.24,2 16,4.24 16,6Z",
+  "mdi:archive-outline": "M20 21H4V10H6V19H18V10H20V21M3 3H21V9H3V3M9.5 11H14.5C14.78 11 15 11.22 15 11.5V13H9V11.5C9 11.22 9.22 11 9.5 11M5 5V7H19V5H5Z",
+  "mdi:alert-outline": "M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16",
+};
 
 function uid(prefix: string): string {
   const random = Math.random().toString(36).slice(2, 10);
@@ -47,6 +65,7 @@ function uid(prefix: string): string {
 
 @customElement("sanity-organizer")
 export class SanityOrganizer extends LitElement {
+  private static readonly LOG_PREFIX = "[SanityOrganizer][UI]";
   @property({ attribute: false }) public hass?: HaConnection;
   @property({ attribute: false }) public runtime?: OrganizerRuntime;
 
@@ -65,6 +84,7 @@ export class SanityOrganizer extends LitElement {
     | null = null;
   @state() private folderDialog: FolderDialogState | null = null;
   @state() private confirmDialog: ConfirmDialogState | null = null;
+  @state() private dragTargetFolderId: string | null = null;
 
   private initialized = false;
   private refreshTimerId: number | null = null;
@@ -91,10 +111,26 @@ export class SanityOrganizer extends LitElement {
       return;
     }
 
+    if (changedProps.has("hass") && this.hass && this.runtime instanceof HomeAssistantOrganizerRuntime) {
+      this.runtime.updateHass(this.hass);
+    }
+
     if (changedProps.has("runtime") && this.runtime && !this.initialized) {
       this.initialized = true;
       await this.initializePanel();
       this.applyRefreshTimer(this.settings.autoRefreshSeconds);
+    }
+
+    const previousDialog = changedProps.get("folderDialog") as FolderDialogState | null | undefined;
+    if (!previousDialog && this.folderDialog) {
+      // Only run when the dialog opens, not on each keystroke.
+      requestAnimationFrame(() => {
+        const input = this.renderRoot?.querySelector<HTMLInputElement>("#folder-name-input");
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      });
     }
   }
 
@@ -115,11 +151,15 @@ export class SanityOrganizer extends LitElement {
   }
 
   private async initializePanel(): Promise<void> {
+    console.log('----initializePanel----');
+    console.log('runtime', this.runtime);
     if (!this.runtime) {
       return;
     }
+    console.debug(`${SanityOrganizer.LOG_PREFIX} initializePanel:start`);
     this.loading = true;
     this.errorText = "";
+    console.log('yes, please');
     try {
       const [storedState, catalog] = await Promise.all([
         this.runtime.loadState(),
@@ -128,8 +168,15 @@ export class SanityOrganizer extends LitElement {
       this.organizerState = storedState;
       this.catalog = catalog;
       this.selectedFolderId = this.selectedFolderId ?? storedState.rootFolderIds[0] ?? null;
+      console.debug(`${SanityOrganizer.LOG_PREFIX} initializePanel:success`, {
+        folderCount: Object.keys(storedState.folders).length,
+        rootFolderCount: storedState.rootFolderIds.length,
+        catalogItemCount: catalog.all.length,
+        selectedFolderId: this.selectedFolderId,
+      });
     } catch (error) {
       this.errorText = `Failed to load panel data: ${error instanceof Error ? error.message : String(error)}`;
+      console.error(`${SanityOrganizer.LOG_PREFIX} initializePanel:error`, error);
     } finally {
       this.loading = false;
     }
@@ -151,12 +198,18 @@ export class SanityOrganizer extends LitElement {
     if (!this.runtime) {
       return;
     }
+    console.debug(`${SanityOrganizer.LOG_PREFIX} persistState:start`, {
+      folderCount: Object.keys(nextState.folders).length,
+      rootFolderCount: nextState.rootFolderIds.length,
+    });
     this.saving = true;
     try {
       await this.runtime.saveState(nextState);
       this.errorText = "";
+      console.debug(`${SanityOrganizer.LOG_PREFIX} persistState:success`);
     } catch (error) {
       this.errorText = `Failed to persist changes: ${error instanceof Error ? error.message : String(error)}`;
+      console.error(`${SanityOrganizer.LOG_PREFIX} persistState:error`, error);
     } finally {
       this.saving = false;
     }
@@ -188,6 +241,10 @@ export class SanityOrganizer extends LitElement {
     };
   }
 
+  private openNormalAddFolderDialog(): void {
+    this.openAddFolderDialog(this.selectedFolderId ?? null);
+  }
+
   private openRenameFolderDialog(folderId: string): void {
     const folder = this.organizerState.folders[folderId];
     if (!folder) {
@@ -209,11 +266,21 @@ export class SanityOrganizer extends LitElement {
     this.folderDialog = { ...this.folderDialog, name: (event.target as HTMLInputElement).value };
   }
 
-  private onFolderDialogIconInput(event: Event): void {
+  private onFolderDialogKeyDown(event: KeyboardEvent): void {
     if (!this.folderDialog) {
       return;
     }
-    this.folderDialog = { ...this.folderDialog, icon: (event.target as HTMLInputElement).value };
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.folderDialog = null;
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      this.submitFolderDialog();
+    }
   }
 
   private submitFolderDialog(): void {
@@ -371,6 +438,10 @@ export class SanityOrganizer extends LitElement {
     event.dataTransfer.setData("application/json", JSON.stringify(payload));
   }
 
+  private clearDragState(): void {
+    this.dragTargetFolderId = null;
+  }
+
   private parseDropPayload(event: DragEvent): DragPayload | null {
     const raw = event.dataTransfer?.getData("application/json");
     if (!raw) {
@@ -390,8 +461,28 @@ export class SanityOrganizer extends LitElement {
     }
   }
 
+  private onFolderDragOver(event: DragEvent, targetFolderId: string): void {
+    this.onDragOver(event);
+    const payload = this.parseDropPayload(event);
+    if (payload?.kind === "folder") {
+      this.dragTargetFolderId = targetFolderId;
+    }
+  }
+
+  private onFolderDragLeave(event: DragEvent, targetFolderId: string): void {
+    const related = event.relatedTarget;
+    if (related instanceof Node && (event.currentTarget as HTMLElement).contains(related)) {
+      return;
+    }
+    if (this.dragTargetFolderId === targetFolderId) {
+      this.dragTargetFolderId = null;
+    }
+  }
+
   private onDropToFolder(event: DragEvent, targetFolderId: string | null): void {
     event.preventDefault();
+    event.stopPropagation();
+    this.dragTargetFolderId = null;
     const payload = this.parseDropPayload(event);
     if (!payload) {
       return;
@@ -444,7 +535,11 @@ export class SanityOrganizer extends LitElement {
     } else if (action.type === "delete-folder") {
       this.requestDeleteFolder(action.folderId);
     } else if (action.type === "add-folder") {
+      this.openNormalAddFolderDialog();
+    } else if (action.type === "add-subfolder") {
       this.openAddFolderDialog(action.folderId);
+    } else if (action.type === "add-root-folder") {
+      this.openAddFolderDialog(null);
     } else if (action.type === "remove-object") {
       this.removeObjectFromFolder(action.folderId, action.objectId);
     }
@@ -482,44 +577,85 @@ export class SanityOrganizer extends LitElement {
     this.applyRefreshTimer(nextSeconds);
   }
 
+  private renderIcon(icon: string, className = ""): TemplateResult {
+    if (customElements.get("ha-icon")) {
+      return className
+        ? html`<ha-icon class=${className} .icon=${icon}></ha-icon>`
+        : html`<ha-icon .icon=${icon}></ha-icon>`;
+    }
+
+    const path = FALLBACK_MDI_PATHS[icon] ?? FALLBACK_MDI_PATHS["mdi:folder-outline"];
+    const classes = className ? `fallback-icon ${className}` : "fallback-icon";
+    return html`
+      <svg
+        class=${classes}
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d=${path}></path>
+      </svg>
+    `;
+  }
+
   private renderFolderTree(folderId: string, depth = 0): TemplateResult | typeof nothing {
     const folder = this.organizerState.folders[folderId];
     if (!folder) {
       return nothing;
     }
+    const hasChildren = folder.children.length > 0;
     const expanded = this.isExpanded(folderId);
     const selected = this.selectedFolderId === folderId;
 
     return html`
-      <div
-        class="folder-row ${selected ? "selected" : ""}"
-        style=${`--depth:${depth}`}
-        draggable="true"
-        @dragstart=${(e: DragEvent) => this.onDragStart(e, { kind: "folder", folderId })}
-        @dragover=${this.onDragOver}
-        @drop=${(e: DragEvent) => this.onDropToFolder(e, folderId)}
-        @click=${() => {
-          this.selectedFolderId = folderId;
-        }}
-        @contextmenu=${(e: MouseEvent) =>
-          this.showContextMenu(e, folder.name, { type: "rename-folder", folderId })}
-      >
-        <button
-          class="icon-button"
-          @click=${(e: Event) => {
-            e.stopPropagation();
-            this.toggleFolder(folderId);
+      <div class="tree-node" style=${`--depth:${depth}`}>
+        <div
+          class="folder-row ${selected ? "selected" : ""} ${this.dragTargetFolderId === folderId ? "drop-target" : ""} ${depth === 0 ? "root" : "child"}"
+          style=${`--depth:${depth}`}
+          draggable="true"
+          @dragstart=${(e: DragEvent) => this.onDragStart(e, { kind: "folder", folderId })}
+          @dragend=${this.clearDragState}
+          @dragover=${(e: DragEvent) => this.onFolderDragOver(e, folderId)}
+          @dragleave=${(e: DragEvent) => this.onFolderDragLeave(e, folderId)}
+          @drop=${(e: DragEvent) => this.onDropToFolder(e, folderId)}
+          @click=${() => {
+            this.selectedFolderId = folderId;
           }}
+          @contextmenu=${(e: MouseEvent) =>
+            this.showContextMenu(e, folder.name, { type: "rename-folder", folderId })}
         >
-          <ha-icon .icon=${expanded ? "mdi:chevron-down" : "mdi:chevron-right"}></ha-icon>
-        </button>
-        <ha-icon class="folder-icon" .icon=${folder.icon}></ha-icon>
-        <span class="folder-name">${folder.name}</span>
-        <span class="folder-count">${folder.objects.length}</span>
+          ${hasChildren
+            ? html`
+                <button
+                  class="tree-toggle"
+                  @click=${(e: Event) => {
+                    e.stopPropagation();
+                    this.toggleFolder(folderId);
+                  }}
+                  aria-label=${expanded ? "Collapse folder" : "Expand folder"}
+                >
+                  <span class="tree-toggle-glyph">${expanded ? "−" : "+"}</span>
+                </button>
+              `
+            : html`<span class="tree-toggle-spacer" aria-hidden="true"></span>`}
+          ${this.renderIcon(folder.icon, "folder-icon")}
+          <span class="folder-name">${folder.name}</span>
+          <span class="folder-count">${folder.objects.length}</span>
+        </div>
+        ${hasChildren && expanded
+          ? html`<div class="tree-children" style=${`--depth:${depth}`}>
+              ${[...folder.children]
+                .sort((leftId, rightId) => {
+                  const left = this.organizerState.folders[leftId];
+                  const right = this.organizerState.folders[rightId];
+                  return (left?.name ?? "").localeCompare(right?.name ?? "", undefined, {
+                    sensitivity: "base",
+                  });
+                })
+                .map((childId) => this.renderFolderTree(childId, depth + 1))}
+            </div>`
+          : nothing}
       </div>
-      ${expanded
-        ? html`${folder.children.map((childId) => this.renderFolderTree(childId, depth + 1))}`
-        : nothing}
     `;
   }
 
@@ -536,11 +672,26 @@ export class SanityOrganizer extends LitElement {
           ? html`
               <button class="menu-item" @click=${() => this.openRenameFolderDialog(action.folderId)}>Rename folder</button>
               <button class="menu-item" @click=${() => this.openAddFolderDialog(action.folderId)}>Add subfolder</button>
+              <button class="menu-item" @click=${() => this.openNormalAddFolderDialog()}>Add folder</button>
+              <button class="menu-item" @click=${() => this.openAddFolderDialog(null)}>Add root folder</button>
               <button class="menu-item danger" @click=${() => this.requestDeleteFolder(action.folderId)}>Delete folder</button>
             `
           : nothing}
         ${action.type === "add-folder"
-          ? html`<button class="menu-item" @click=${() => this.openAddFolderDialog(action.folderId)}>Add folder</button>`
+          ? html`
+              <button class="menu-item" @click=${() => this.openNormalAddFolderDialog()}>Add folder</button>
+              <button class="menu-item" @click=${() => this.openAddFolderDialog(null)}>Add root folder</button>
+            `
+          : nothing}
+        ${action.type === "add-subfolder"
+          ? html`
+              <button class="menu-item" @click=${() => this.openAddFolderDialog(action.folderId)}>Add subfolder</button>
+              <button class="menu-item" @click=${() => this.openNormalAddFolderDialog()}>Add folder</button>
+              <button class="menu-item" @click=${() => this.openAddFolderDialog(null)}>Add root folder</button>
+            `
+          : nothing}
+        ${action.type === "add-root-folder"
+          ? html`<button class="menu-item" @click=${() => this.openAddFolderDialog(null)}>Add root folder</button>`
           : nothing}
         ${action.type === "remove-object"
           ? html`<button class="menu-item" @click=${() => this.executeContextAction()}>Remove from folder</button>`
@@ -557,26 +708,39 @@ export class SanityOrganizer extends LitElement {
     const canSubmit = this.folderDialog.name.trim().length > 0;
     return html`
       <div class="dialog-backdrop" @click=${() => { this.folderDialog = null; }}>
-        <div class="dialog-card" @click=${(e: Event) => e.stopPropagation()}>
+        <div class="dialog-card" @click=${(e: Event) => e.stopPropagation()} @keydown=${this.onFolderDialogKeyDown}>
           <h3>${title}</h3>
           <label>
             Name
             <input
+              id="folder-name-input"
               class="dialog-input"
               .value=${this.folderDialog.name}
               @input=${this.onFolderDialogNameInput}
               placeholder="Folder name"
             />
           </label>
-          <label>
-            Icon
-            <input
-              class="dialog-input"
-              .value=${this.folderDialog.icon}
-              @input=${this.onFolderDialogIconInput}
-              placeholder="mdi:folder-outline"
-            />
-          </label>
+          ${this.folderDialog.mode === "rename"
+            ? html`
+                <label>
+                  Icon
+                  <input
+                    class="dialog-input"
+                    .value=${this.folderDialog.icon}
+                    @input=${(event: Event) => {
+                      if (!this.folderDialog) {
+                        return;
+                      }
+                      this.folderDialog = {
+                        ...this.folderDialog,
+                        icon: (event.target as HTMLInputElement).value,
+                      };
+                    }}
+                    placeholder="mdi:folder-outline"
+                  />
+                </label>
+              `
+            : nothing}
           <div class="dialog-actions">
             <button class="ha-btn" @click=${() => { this.folderDialog = null; }}>Cancel</button>
             <button class="ha-btn" ?disabled=${!canSubmit} @click=${() => this.submitFolderDialog()}>
@@ -609,7 +773,7 @@ export class SanityOrganizer extends LitElement {
   }
 
   protected override render() {
-    if (!this.hass) {
+    if (!this.runtime && !this.hass) {
       return html`<div class="panel-shell">Attach this panel inside Home Assistant.</div>`;
     }
 
@@ -635,7 +799,7 @@ export class SanityOrganizer extends LitElement {
             <span class="subtitle">Virtual folders for Home Assistant references</span>
           </div>
           <div class="toolbar-actions">
-            <button class="ha-btn" @click=${() => this.openAddFolderDialog(null)}>New Folder</button>
+            <button class="ha-btn" @click=${() => this.openNormalAddFolderDialog()}>New Folder</button>
             <button class="ha-btn" @click=${() => this.showSettings = !this.showSettings}>Settings</button>
             <button class="ha-btn" @click=${() => void this.refreshCatalog()}>Refresh</button>
           </div>
@@ -683,7 +847,7 @@ export class SanityOrganizer extends LitElement {
           : nothing}
 
         <div class="search-row">
-          <ha-icon class="search-icon" .icon=${"mdi:magnify"}></ha-icon>
+          ${this.renderIcon("mdi:magnify", "search-icon")}
           <input
             id="so-search"
             class="search-input"
@@ -707,7 +871,15 @@ export class SanityOrganizer extends LitElement {
             <div class="root-drop-zone" data-drop-id=${ROOT_DROP_ID}>Drop here to move folder to root</div>
             ${this.organizerState.rootFolderIds.length === 0
               ? html`<div class="empty">No folders yet. Create one to start organizing.</div>`
-              : this.organizerState.rootFolderIds.map((folderId) => this.renderFolderTree(folderId))}
+              : [...this.organizerState.rootFolderIds]
+                  .sort((leftId, rightId) => {
+                    const left = this.organizerState.folders[leftId];
+                    const right = this.organizerState.folders[rightId];
+                    return (left?.name ?? "").localeCompare(right?.name ?? "", undefined, {
+                      sensitivity: "base",
+                    });
+                  })
+                  .map((folderId) => this.renderFolderTree(folderId))}
           </aside>
 
           <main class="content-pane">
@@ -743,7 +915,7 @@ export class SanityOrganizer extends LitElement {
                         .checked=${this.selectedObjectIds.has(object.objectId)}
                         @change=${(e: Event) => this.onSourceCheckboxToggle(e, object.objectId)}
                       />
-                      <ha-icon .icon=${object.icon}></ha-icon>
+                      ${this.renderIcon(object.icon)}
                       <div>
                         <div>${object.displayName}</div>
                         <div class="meta">${object.type} - ${object.refId}</div>
@@ -759,8 +931,16 @@ export class SanityOrganizer extends LitElement {
               ${selectedFolder
                 ? html`
                     <div class="folder-header">
-                      <ha-icon .icon=${selectedFolder.icon}></ha-icon>
-                      <h2>${selectedFolder.name}</h2>
+                      <div class="folder-header-main">
+                        ${this.renderIcon(selectedFolder.icon)}
+                        <h2>${selectedFolder.name}</h2>
+                      </div>
+                      <button
+                        class="ha-btn danger-fill"
+                        @click=${() => this.requestDeleteFolder(selectedFolder.id)}
+                      >
+                        Delete Folder
+                      </button>
                     </div>
                     <div
                       class="drop-zone"
@@ -773,7 +953,7 @@ export class SanityOrganizer extends LitElement {
                       ${this.folderObjects(selectedFolder).map(
                         (object) => html`
                           <div
-                            class="list-item"
+                            class="list-item folder-object-item"
                             draggable="true"
                             @dragstart=${(e: DragEvent) =>
                               this.onDragStart(e, {
@@ -788,7 +968,7 @@ export class SanityOrganizer extends LitElement {
                                 objectId: object.objectId,
                               })}
                           >
-                            <ha-icon .icon=${object.icon}></ha-icon>
+                            ${this.renderIcon(object.icon)}
                             <div>
                               <div>${object.displayName}</div>
                               <div class="meta">${object.type} - ${object.refId}</div>
@@ -797,7 +977,7 @@ export class SanityOrganizer extends LitElement {
                               class="icon-button"
                               @click=${() => this.removeObjectFromFolder(selectedFolder.id, object.objectId)}
                             >
-                              <ha-icon .icon=${"mdi:close"}></ha-icon>
+                              ${this.renderIcon("mdi:close")}
                             </button>
                           </div>
                         `,
@@ -955,6 +1135,15 @@ export class SanityOrganizer extends LitElement {
       color: var(--text-muted);
     }
 
+    .fallback-icon {
+      width: 20px;
+      height: 20px;
+      display: block;
+      fill: currentColor;
+      color: inherit;
+      flex: 0 0 auto;
+    }
+
     .search-input {
       width: 100%;
       border: 0;
@@ -1021,21 +1210,67 @@ export class SanityOrganizer extends LitElement {
     }
 
     .folder-row {
-      --pad: calc(var(--depth) * 14px);
+      --pad: calc(var(--depth) * 10px);
+      position: relative;
       display: grid;
       grid-template-columns: 24px 22px 1fr auto;
       align-items: center;
       gap: 6px;
       margin: 2px 0;
       padding: 6px;
-      padding-left: calc(6px + var(--pad));
+      padding-left: calc(2px + var(--pad));
       border-radius: 8px;
       cursor: pointer;
+    }
+
+    .tree-node {
+      position: relative;
+    }
+
+    .tree-children {
+      position: relative;
+    }
+
+    .tree-toggle {
+      appearance: none;
+      border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+      background: color-mix(in srgb, var(--bg-1) 92%, white);
+      color: var(--text-main);
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .tree-toggle:hover {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+      background: color-mix(in srgb, var(--accent) 8%, var(--bg-1));
+    }
+
+    .tree-toggle-glyph {
+      font-size: 14px;
+      line-height: 1;
+      font-weight: 700;
+      transform: translateY(-1px);
+    }
+
+    .tree-toggle-spacer {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
     }
 
     .folder-row:hover,
     .folder-row.selected {
       background: color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    .folder-row.drop-target {
+      background: color-mix(in srgb, var(--accent) 22%, transparent);
+      outline: 1px solid color-mix(in srgb, var(--accent) 65%, var(--line));
     }
 
     .folder-count {
@@ -1101,6 +1336,10 @@ export class SanityOrganizer extends LitElement {
       border-color: var(--line);
     }
 
+    .folder-object-item {
+      grid-template-columns: 20px 1fr auto;
+    }
+
     .meta {
       color: var(--text-muted);
       font-size: 12px;
@@ -1109,8 +1348,16 @@ export class SanityOrganizer extends LitElement {
     .folder-header {
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
+      gap: 12px;
       margin-bottom: 8px;
+    }
+
+    .folder-header-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
     }
 
     .folder-header h2 {

@@ -376,6 +376,8 @@ export class SanityOrganizer extends LitElement {
     this.mutateState((draft) => {
       this.treeService.addObjectsToFolder(draft, selectedFolderId, objects);
     });
+    this.selectedObjectIds = new Set<string>();
+    this.lastSelectedObjectId = null;
   }
 
   private removeObjectFromFolder(folderId: string, objectId: string): void {

@@ -120,8 +120,9 @@ export class OrganizerTreeService {
     if (!folder) {
       return;
     }
-    // todo: items are allow to exist in multiple folders.
-    this.removeObjectEverywhere(state, object.objectId);
+    if (folder.objects.some((entry) => entry.objectId === object.objectId)) {
+      return;
+    }
     folder.objects.push(new FolderObjectRef(object.objectId, object.type, object.refId));
   }
 
@@ -131,8 +132,9 @@ export class OrganizerTreeService {
       return;
     }
     for (const object of objects) {
-      // todo: items are allow to exist in multiple folders.
-      this.removeObjectEverywhere(state, object.objectId);
+      if (folder.objects.some((entry) => entry.objectId === object.objectId)) {
+        continue;
+      }
       folder.objects.push(new FolderObjectRef(object.objectId, object.type, object.refId));
     }
   }

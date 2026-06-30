@@ -624,8 +624,10 @@ export class SanityOrganizer extends LitElement {
           @click=${() => {
             this.selectedFolderId = folderId;
           }}
-          @contextmenu=${(e: MouseEvent) =>
-            this.showContextMenu(e, folder.name, { type: "rename-folder", folderId })}
+          @contextmenu=${(e: MouseEvent) => {
+            e.stopPropagation();
+            this.showContextMenu(e, folder.name, { type: "rename-folder", folderId });
+          }}
         >
           ${hasChildren
             ? html`
@@ -667,6 +669,7 @@ export class SanityOrganizer extends LitElement {
       return nothing;
     }
     const action = this.contextMenu.action;
+    console.log("action.type", action.type);
     return html`
       <div class="menu-backdrop" @click=${this.onGlobalClick}></div>
       <div class="menu" style=${`top:${this.contextMenu.y}px;left:${this.contextMenu.x}px`}>
@@ -723,27 +726,6 @@ export class SanityOrganizer extends LitElement {
               placeholder="Folder name"
             />
           </label>
-          ${this.folderDialog.mode === "rename"
-            ? html`
-                <label>
-                  Icon
-                  <input
-                    class="dialog-input"
-                    .value=${this.folderDialog.icon}
-                    @input=${(event: Event) => {
-                      if (!this.folderDialog) {
-                        return;
-                      }
-                      this.folderDialog = {
-                        ...this.folderDialog,
-                        icon: (event.target as HTMLInputElement).value,
-                      };
-                    }}
-                    placeholder="mdi:folder-outline"
-                  />
-                </label>
-              `
-            : nothing}
           <div class="dialog-actions">
             <button class="ha-btn" @click=${() => { this.folderDialog = null; }}>Cancel</button>
             <button class="ha-btn" ?disabled=${!canSubmit} @click=${() => this.submitFolderDialog()}>

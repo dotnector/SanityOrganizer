@@ -1,19 +1,19 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { loadObjectCatalog, type ObjectCatalog } from "./ha-api";
-import {
-  createInitialState,
-  loadOrganizerState,
-  persistOrganizerState,
-} from "./storage";
-import type {
-  ContextAction,
-  FolderNode,
-  HomeAssistantLike,
-  ObjectRecord,
-  OrganizerSettings,
-  OrganizerState,
-} from "./types";
+import { FolderNode } from "./app/domain/FolderNode";
+import { ObjectCatalog } from "./app/domain/ObjectCatalog";
+import { ObjectRecord } from "./app/domain/ObjectRecord";
+import { OrganizerSettings } from "./app/domain/OrganizerSettings";
+import { OrganizerState } from "./app/domain/OrganizerState";
+import { ObjectQueryService } from "./app/services/ObjectQueryService";
+import { ObjectSelectionService } from "./app/services/ObjectSelectionService";
+import { OrganizerStateCloner } from "./app/services/OrganizerStateCloner";
+import { OrganizerStateFactory } from "./app/services/OrganizerStateFactory";
+import { OrganizerStorageService } from "./app/services/OrganizerStorageService";
+import { OrganizerTreeService } from "./app/services/OrganizerTreeService";
+import type { HaConnection } from "./ha/domain/HaConnection";
+import { HaCatalogService } from "./ha/services/HaCatalogService";
+import { HaRuntimeConnection } from "./ha/services/HaRuntimeConnection";
 
 type DragPayload =
   | { kind: "folder"; folderId: string }
@@ -33,6 +33,12 @@ type ConfirmDialogState = {
   action: { type: "delete-folder"; folderId: string };
 };
 
+type ContextAction =
+  | { type: "rename-folder"; folderId: string }
+  | { type: "delete-folder"; folderId: string }
+  | { type: "add-folder"; folderId: string | null }
+  | { type: "remove-object"; folderId: string; objectId: string };
+
 const ROOT_DROP_ID = "__root__";
 
 function uid(prefix: string): string {
@@ -40,31 +46,12 @@ function uid(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${random}`;
 }
 
-function deepCloneState(value: OrganizerState): OrganizerState {
-  return {
-    version: 1,
-    rootFolderIds: [...value.rootFolderIds],
-    expandedFolderIds: [...value.expandedFolderIds],
-    settings: { ...value.settings },
-    folders: Object.fromEntries(
-      Object.entries(value.folders).map(([id, folder]) => [
-        id,
-        {
-          ...folder,
-          children: [...folder.children],
-          objects: folder.objects.map((obj) => ({ ...obj })),
-        },
-      ]),
-    ),
-  };
-}
-
 @customElement("sanity-organizer")
 export class SanityOrganizer extends LitElement {
-  @property({ attribute: false }) public hass?: HomeAssistantLike;
+  @property({ attribute: false }) public hass?: HaConnection;
 
-  @state() private organizerState: OrganizerState = createInitialState();
-  @state() private catalog: ObjectCatalog = { byId: new Map(), all: [] };
+  @state() private organizerState: OrganizerState = new OrganizerStateFactory().createInitial();
+  @state() private catalog: ObjectCatalog = new ObjectCatalog(new Map(), []);
   @state() private loading = true;
   @state() private saving = false;
   @state() private errorText = "";
@@ -81,6 +68,12 @@ export class SanityOrganizer extends LitElement {
 
   private initialized = false;
   private refreshTimerId: number | null = null;
+  private readonly stateCloner = new OrganizerStateCloner();
+  private readonly treeService = new OrganizerTreeService();
+  private readonly queryService = new ObjectQueryService();
+  private readonly selectionService = new ObjectSelectionService();
+  private storageService: OrganizerStorageService | null = null;
+  private catalogService: HaCatalogService | null = null;
 
   public connectedCallback(): void {
     super.connectedCallback();
@@ -95,6 +88,9 @@ export class SanityOrganizer extends LitElement {
 
   protected override async updated(changedProps: Map<string, unknown>): Promise<void> {
     if (changedProps.has("hass") && this.hass && !this.initialized) {
+      const runtime = new HaRuntimeConnection(this.hass);
+      this.storageService = new OrganizerStorageService(runtime);
+      this.catalogService = new HaCatalogService(runtime);
       this.initialized = true;
       await this.initializePanel();
       this.applyRefreshTimer(this.settings.autoRefreshSeconds);
@@ -118,15 +114,15 @@ export class SanityOrganizer extends LitElement {
   }
 
   private async initializePanel(): Promise<void> {
-    if (!this.hass) {
+    if (!this.storageService || !this.catalogService) {
       return;
     }
     this.loading = true;
     this.errorText = "";
     try {
       const [storedState, catalog] = await Promise.all([
-        loadOrganizerState(this.hass),
-        loadObjectCatalog(this.hass),
+        this.storageService.load(),
+        this.catalogService.loadObjectCatalog(),
       ]);
       this.organizerState = storedState;
       this.catalog = catalog;
@@ -139,11 +135,11 @@ export class SanityOrganizer extends LitElement {
   }
 
   private async refreshCatalog(): Promise<void> {
-    if (!this.hass) {
+    if (!this.catalogService) {
       return;
     }
     try {
-      this.catalog = await loadObjectCatalog(this.hass);
+      this.catalog = await this.catalogService.loadObjectCatalog();
     } catch {
       // Keep the latest good catalog when background refresh fails.
     }
@@ -151,12 +147,12 @@ export class SanityOrganizer extends LitElement {
 
   private async persistState(nextState: OrganizerState): Promise<void> {
     this.organizerState = nextState;
-    if (!this.hass) {
+    if (!this.storageService) {
       return;
     }
     this.saving = true;
     try {
-      await persistOrganizerState(this.hass, nextState);
+      await this.storageService.save(nextState);
       this.errorText = "";
     } catch (error) {
       this.errorText = `Failed to persist changes: ${error instanceof Error ? error.message : String(error)}`;
@@ -166,7 +162,7 @@ export class SanityOrganizer extends LitElement {
   }
 
   private mutateState(mutator: (draft: OrganizerState) => void): void {
-    const draft = deepCloneState(this.organizerState);
+    const draft = this.stateCloner.clone(this.organizerState);
     mutator(draft);
     void this.persistState(draft);
   }
@@ -177,11 +173,7 @@ export class SanityOrganizer extends LitElement {
 
   private toggleFolder(folderId: string): void {
     this.mutateState((draft) => {
-      if (draft.expandedFolderIds.includes(folderId)) {
-        draft.expandedFolderIds = draft.expandedFolderIds.filter((id) => id !== folderId);
-      } else {
-        draft.expandedFolderIds.push(folderId);
-      }
+      this.treeService.toggleExpanded(draft, folderId);
     });
   }
 
@@ -237,48 +229,16 @@ export class SanityOrganizer extends LitElement {
     if (dialog.mode === "add") {
       const folderId = uid("folder");
       this.mutateState((draft) => {
-        draft.folders[folderId] = {
-          id: folderId,
-          name,
-          icon,
-          parentId: dialog.parentId,
-          children: [],
-          objects: [],
-        };
-        if (dialog.parentId) {
-          draft.folders[dialog.parentId]?.children.push(folderId);
-          if (!draft.expandedFolderIds.includes(dialog.parentId)) {
-            draft.expandedFolderIds.push(dialog.parentId);
-          }
-        } else {
-          draft.rootFolderIds.push(folderId);
-        }
-        draft.expandedFolderIds.push(folderId);
+        this.treeService.createFolder(draft, dialog.parentId, folderId, name, icon);
       });
       this.selectedFolderId = folderId;
     } else if (dialog.folderId) {
       this.mutateState((draft) => {
-        const folder = draft.folders[dialog.folderId!];
-        if (!folder) {
-          return;
-        }
-        folder.name = name;
-        folder.icon = icon;
+        this.treeService.renameFolder(draft, dialog.folderId!, name, icon);
       });
     }
 
     this.folderDialog = null;
-  }
-
-  private collectDescendants(folderId: string, acc: Set<string>): void {
-    acc.add(folderId);
-    const folder = this.organizerState.folders[folderId];
-    if (!folder) {
-      return;
-    }
-    for (const childId of folder.children) {
-      this.collectDescendants(childId, acc);
-    }
   }
 
   private requestDeleteFolder(folderId: string): void {
@@ -301,17 +261,9 @@ export class SanityOrganizer extends LitElement {
     }
     if (dialog.action.type === "delete-folder") {
       const folderId = dialog.action.folderId;
-      const removeIds = new Set<string>();
-      this.collectDescendants(folderId, removeIds);
+      let removeIds = new Set<string>();
       this.mutateState((draft) => {
-        draft.rootFolderIds = draft.rootFolderIds.filter((id) => !removeIds.has(id));
-        draft.expandedFolderIds = draft.expandedFolderIds.filter((id) => !removeIds.has(id));
-        for (const candidate of Object.values(draft.folders)) {
-          candidate.children = candidate.children.filter((id) => !removeIds.has(id));
-        }
-        for (const id of removeIds) {
-          delete draft.folders[id];
-        }
+        removeIds = this.treeService.deleteFolder(draft, folderId);
       });
       if (this.selectedFolderId && removeIds.has(this.selectedFolderId)) {
         this.selectedFolderId = null;
@@ -319,63 +271,15 @@ export class SanityOrganizer extends LitElement {
     }
   }
 
-  private removeObjectEverywhere(draft: OrganizerState, objectId: string): void {
-    for (const folder of Object.values(draft.folders)) {
-      folder.objects = folder.objects.filter((ref) => ref.objectId !== objectId);
-    }
-  }
-
   private addObjectToFolder(folderId: string, object: ObjectRecord): void {
     this.mutateState((draft) => {
-      const target = draft.folders[folderId];
-      if (!target) {
-        return;
-      }
-      this.removeObjectEverywhere(draft, object.objectId);
-      target.objects.push({
-        objectId: object.objectId,
-        type: object.type,
-        refId: object.refId,
-      });
+      this.treeService.addObjectToFolder(draft, folderId, object);
     });
   }
 
   private moveFolder(folderId: string, newParentId: string | null): void {
-    if (folderId === newParentId) {
-      return;
-    }
-    const current = this.organizerState.folders[folderId];
-    if (!current) {
-      return;
-    }
-    if (newParentId) {
-      const descendants = new Set<string>();
-      this.collectDescendants(folderId, descendants);
-      if (descendants.has(newParentId)) {
-        return;
-      }
-    }
-
     this.mutateState((draft) => {
-      const moving = draft.folders[folderId];
-      if (!moving) {
-        return;
-      }
-      if (moving.parentId) {
-        const oldParent = draft.folders[moving.parentId];
-        if (oldParent) {
-          oldParent.children = oldParent.children.filter((id) => id !== folderId);
-        }
-      } else {
-        draft.rootFolderIds = draft.rootFolderIds.filter((id) => id !== folderId);
-      }
-
-      moving.parentId = newParentId;
-      if (newParentId) {
-        draft.folders[newParentId]?.children.push(folderId);
-      } else {
-        draft.rootFolderIds.push(folderId);
-      }
+      this.treeService.moveFolder(draft, folderId, newParentId);
     });
   }
 
@@ -389,28 +293,13 @@ export class SanityOrganizer extends LitElement {
       .filter((obj): obj is ObjectRecord => Boolean(obj));
 
     this.mutateState((draft) => {
-      const target = draft.folders[selectedFolderId];
-      if (!target) {
-        return;
-      }
-      for (const object of objects) {
-        this.removeObjectEverywhere(draft, object.objectId);
-        target.objects.push({
-          objectId: object.objectId,
-          type: object.type,
-          refId: object.refId,
-        });
-      }
+      this.treeService.addObjectsToFolder(draft, selectedFolderId, objects);
     });
   }
 
   private removeObjectFromFolder(folderId: string, objectId: string): void {
     this.mutateState((draft) => {
-      const folder = draft.folders[folderId];
-      if (!folder) {
-        return;
-      }
-      folder.objects = folder.objects.filter((obj) => obj.objectId !== objectId);
+      this.treeService.removeObjectFromFolder(draft, folderId, objectId);
     });
   }
 
@@ -421,49 +310,22 @@ export class SanityOrganizer extends LitElement {
   private onSourceSelectClick(event: MouseEvent, objectId: string): void {
     event.stopPropagation();
     const orderedIds = this.getFilteredObjectIds();
-    const next = new Set(this.selectedObjectIds);
-    const isToggle = event.ctrlKey || event.metaKey;
-
-    if (event.shiftKey && this.lastSelectedObjectId) {
-      const startIdx = orderedIds.indexOf(this.lastSelectedObjectId);
-      const endIdx = orderedIds.indexOf(objectId);
-      if (startIdx >= 0 && endIdx >= 0) {
-        const low = Math.min(startIdx, endIdx);
-        const high = Math.max(startIdx, endIdx);
-        const rangeIds = orderedIds.slice(low, high + 1);
-        if (!isToggle) {
-          next.clear();
-        }
-        for (const id of rangeIds) {
-          next.add(id);
-        }
-      } else {
-        next.add(objectId);
-      }
-    } else if (isToggle) {
-      if (next.has(objectId)) {
-        next.delete(objectId);
-      } else {
-        next.add(objectId);
-      }
-    } else {
-      next.clear();
-      next.add(objectId);
-    }
-
+    const next = this.selectionService.onRowClick(
+      this.selectedObjectIds,
+      orderedIds,
+      objectId,
+      this.lastSelectedObjectId,
+      event.shiftKey,
+      event.ctrlKey || event.metaKey,
+    );
     this.selectedObjectIds = next;
     this.lastSelectedObjectId = objectId;
   }
 
   private onSourceCheckboxToggle(event: Event, objectId: string): void {
     event.stopPropagation();
-    const next = new Set(this.selectedObjectIds);
     const checked = (event.target as HTMLInputElement).checked;
-    if (checked) {
-      next.add(objectId);
-    } else {
-      next.delete(objectId);
-    }
+    const next = this.selectionService.onCheckboxToggle(this.selectedObjectIds, objectId, checked);
     this.selectedObjectIds = next;
     this.lastSelectedObjectId = objectId;
   }
@@ -472,7 +334,7 @@ export class SanityOrganizer extends LitElement {
     const isMetaSelectAll = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a";
     if (isMetaSelectAll) {
       event.preventDefault();
-      this.selectedObjectIds = new Set(this.getFilteredObjectIds());
+      this.selectedObjectIds = this.selectionService.selectAll(this.getFilteredObjectIds());
       return;
     }
 
@@ -587,59 +449,12 @@ export class SanityOrganizer extends LitElement {
     }
   }
 
-  private sortObjects(entries: ObjectRecord[]): ObjectRecord[] {
-    const sorted = [...entries];
-    if (this.settings.sortMode === "name") {
-      sorted.sort((a, b) => a.displayName.localeCompare(b.displayName));
-      return sorted;
-    }
-    sorted.sort((a, b) => {
-      if (a.type === b.type) {
-        return a.displayName.localeCompare(b.displayName);
-      }
-      return a.type.localeCompare(b.type);
-    });
-    return sorted;
-  }
-
   private filteredObjects(): ObjectRecord[] {
-    const query = this.search.trim().toLowerCase();
-    if (!query) {
-      return this.sortObjects(this.catalog.all);
-    }
-    const filtered = this.catalog.all.filter((object) => {
-      const haystack = `${object.displayName} ${object.refId} ${object.type} ${object.domain || ""}`.toLowerCase();
-      return haystack.includes(query);
-    });
-    return this.sortObjects(filtered);
+    return this.queryService.filterCatalog(this.catalog, this.search, this.settings);
   }
 
   private folderObjects(folder: FolderNode): ObjectRecord[] {
-    const query = this.search.trim().toLowerCase();
-    const merged = folder.objects
-      .map((ref) => {
-        const record = this.catalog.byId.get(ref.objectId);
-        if (record) {
-          return record;
-        }
-        return {
-          objectId: ref.objectId,
-          type: ref.type,
-          refId: ref.refId,
-          displayName: `(Missing) ${ref.refId}`,
-          icon: "mdi:alert-outline",
-          secondary: "Reference no longer exists",
-        } as ObjectRecord;
-      })
-      .filter((object) => {
-        if (!query) {
-          return true;
-        }
-        const text = `${object.displayName} ${object.refId} ${object.type}`.toLowerCase();
-        return text.includes(query);
-      });
-
-    return this.sortObjects(merged);
+    return this.queryService.folderObjects(folder, this.catalog, this.search, this.settings);
   }
 
   private onSortModeChange(event: Event): void {

@@ -5,6 +5,7 @@ import { OrganizerStorageService } from "../../app/services/OrganizerStorageServ
 import { HaCatalogService } from "../../ha/services/HaCatalogService";
 import { HaRuntimeConnection } from "../../ha/services/HaRuntimeConnection";
 import type { HaConnection } from "../../ha/domain/HaConnection";
+import { Logger } from "../Logger";
 
 /**
 Implements organizer runtime operations backed by Home Assistant services.
@@ -26,44 +27,44 @@ export class HomeAssistantOrganizerRuntime implements OrganizerRuntime {
   }
 
   public async loadHaItemCatalog(): Promise<HaItemCatalog> {
-    console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:start`);
+    Logger.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:start`);
     try {
       const catalog = await this.catalogService.loadHaItemCatalog();
-      console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:success`, {
+      Logger.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:success`, {
         itemCount: catalog.all.length,
       });
       return catalog;
     } catch (error) {
-      console.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:error`, error);
+      Logger.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:error`, error);
       throw error;
     }
   }
 
   public async loadState(): Promise<OrganizerState> {
-    console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadState:start`);
+    Logger.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadState:start`);
     try {
       const state = await this.storageService.load();
-      console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadState:success`, {
+      Logger.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadState:success`, {
         folderCount: Object.keys(state.folders).length,
         rootFolderCount: state.rootFolderIds.length,
       });
       return state;
     } catch (error) {
-      console.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadState:error`, error);
+      Logger.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadState:error`, error);
       throw error;
     }
   }
 
   public async saveState(state: OrganizerState): Promise<void> {
-    console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} saveState:start`, {
+    Logger.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} saveState:start`, {
       folderCount: Object.keys(state.folders).length,
       rootFolderCount: state.rootFolderIds.length,
     });
     try {
       await this.storageService.save(state);
-      console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} saveState:success`);
+      Logger.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} saveState:success`);
     } catch (error) {
-      console.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} saveState:error`, error);
+      Logger.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} saveState:error`, error);
       throw error;
     }
   }

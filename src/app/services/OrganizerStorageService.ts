@@ -1,6 +1,7 @@
 import { OrganizerState } from "../domain/OrganizerState";
 import { OrganizerStateSanitizer } from "./OrganizerStateSanitizer";
 import type { HaConnection } from "../../ha/domain/HaConnection";
+import { Logger } from "../../infrastructure/Logger";
 
 /**
 Loads and saves organizer state through Home Assistant frontend user-data APIs.
@@ -18,7 +19,7 @@ export class OrganizerStorageService {
   }
 
   public async load(): Promise<OrganizerState> {
-    console.debug(`${OrganizerStorageService.LOG_PREFIX} load:start`, {
+    Logger.debug(`${OrganizerStorageService.LOG_PREFIX} load:start`, {
       storageKey: OrganizerStorageService.STORAGE_KEY,
     });
     try {
@@ -27,7 +28,7 @@ export class OrganizerStorageService {
         key: OrganizerStorageService.STORAGE_KEY,
       });
       const sanitized = this.sanitizer.sanitize(envelope?.value ?? null);
-      console.debug(`${OrganizerStorageService.LOG_PREFIX} load:success`, {
+      Logger.debug(`${OrganizerStorageService.LOG_PREFIX} load:success`, {
         hasEnvelope: Boolean(envelope),
         hasValue: envelope?.value != null,
         folderCount: Object.keys(sanitized.folders).length,
@@ -35,13 +36,13 @@ export class OrganizerStorageService {
       });
       return sanitized;
     } catch (error) {
-      console.error(`${OrganizerStorageService.LOG_PREFIX} load:error`, error);
+      Logger.error(`${OrganizerStorageService.LOG_PREFIX} load:error`, error);
       throw error;
     }
   }
 
   public async save(state: OrganizerState): Promise<void> {
-    console.debug(`${OrganizerStorageService.LOG_PREFIX} save:start`, {
+    Logger.debug(`${OrganizerStorageService.LOG_PREFIX} save:start`, {
       storageKey: OrganizerStorageService.STORAGE_KEY,
       folderCount: Object.keys(state.folders).length,
       rootFolderCount: state.rootFolderIds.length,
@@ -52,11 +53,11 @@ export class OrganizerStorageService {
         key: OrganizerStorageService.STORAGE_KEY,
         value: state,
       });
-      console.debug(`${OrganizerStorageService.LOG_PREFIX} save:success`, {
+      Logger.debug(`${OrganizerStorageService.LOG_PREFIX} save:success`, {
         storageKey: OrganizerStorageService.STORAGE_KEY,
       });
     } catch (error) {
-      console.error(`${OrganizerStorageService.LOG_PREFIX} save:error`, error);
+      Logger.error(`${OrganizerStorageService.LOG_PREFIX} save:error`, error);
       throw error;
     }
   }

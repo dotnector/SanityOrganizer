@@ -14,6 +14,7 @@ import { OrganizerTreeService } from "./app/services/OrganizerTreeService";
 import type { HaConnection } from "./ha/domain/HaConnection";
 import { RuntimeResolver } from "./infrastructure/RuntimeResolver";
 import { HomeAssistantOrganizerRuntime } from "./infrastructure/homeassistant/HomeAssistantOrganizerRuntime";
+import { Logger } from "./infrastructure/Logger";
 
 
 type DragPayload =
@@ -155,15 +156,15 @@ export class SanityOrganizer extends LitElement {
   }
 
   private async initializePanel(): Promise<void> {
-    console.log('----initializePanel----');
-    console.log('runtime', this.runtime);
+    Logger.debug("----initializePanel----");
+    Logger.debug("runtime", this.runtime);
     if (!this.runtime) {
       return;
     }
-    console.debug(`${SanityOrganizer.LOG_PREFIX} initializePanel:start`);
+    Logger.debug(`${SanityOrganizer.LOG_PREFIX} initializePanel:start`);
     this.loading = true;
     this.errorText = "";
-    console.log('yes, please');
+    Logger.debug("yes, please");
     try {
       const [storedState, catalog] = await Promise.all([
         this.runtime.loadState(),
@@ -172,7 +173,7 @@ export class SanityOrganizer extends LitElement {
       this.organizerState = storedState;
       this.catalog = catalog;
       this.selectedFolderId = this.resolveSelectedFolderId(storedState, storedState.selectedFolderId);
-      console.debug(`${SanityOrganizer.LOG_PREFIX} initializePanel:success`, {
+      Logger.debug(`${SanityOrganizer.LOG_PREFIX} initializePanel:success`, {
         folderCount: Object.keys(storedState.folders).length,
         rootFolderCount: storedState.rootFolderIds.length,
         catalogItemCount: catalog.all.length,
@@ -180,7 +181,7 @@ export class SanityOrganizer extends LitElement {
       });
     } catch (error) {
       this.errorText = `Failed to load panel data: ${error instanceof Error ? error.message : String(error)}`;
-      console.error(`${SanityOrganizer.LOG_PREFIX} initializePanel:error`, error);
+      Logger.error(`${SanityOrganizer.LOG_PREFIX} initializePanel:error`, error);
     } finally {
       this.loading = false;
     }
@@ -202,17 +203,17 @@ export class SanityOrganizer extends LitElement {
     if (!this.runtime) {
       return;
     }
-    console.debug(`${SanityOrganizer.LOG_PREFIX} persistState:start`, {
+    Logger.debug(`${SanityOrganizer.LOG_PREFIX} persistState:start`, {
       folderCount: Object.keys(nextState.folders).length,
       rootFolderCount: nextState.rootFolderIds.length,
     });
     try {
       await this.runtime.saveState(nextState);
       this.errorText = "";
-      console.debug(`${SanityOrganizer.LOG_PREFIX} persistState:success`);
+      Logger.debug(`${SanityOrganizer.LOG_PREFIX} persistState:success`);
     } catch (error) {
       this.errorText = `Failed to persist changes: ${error instanceof Error ? error.message : String(error)}`;
-      console.error(`${SanityOrganizer.LOG_PREFIX} persistState:error`, error);
+      Logger.error(`${SanityOrganizer.LOG_PREFIX} persistState:error`, error);
     } finally {
     }
   }
@@ -748,7 +749,7 @@ export class SanityOrganizer extends LitElement {
       return nothing;
     }
     const action = this.contextMenu.action;
-    console.log("action.type", action.type);
+    Logger.debug("action.type", action.type);
     return html`
       <div class="menu-backdrop" @click=${this.onGlobalClick}></div>
       <div class="menu" style=${`top:${this.contextMenu.y}px;left:${this.contextMenu.x}px`}>
@@ -757,21 +758,12 @@ export class SanityOrganizer extends LitElement {
           ? html`
               <button class="menu-item" @click=${() => this.openRenameFolderDialog(action.folderId)}>Rename folder</button>
               <button class="menu-item" @click=${() => this.openAddFolderDialog(action.folderId)}>Add subfolder</button>
-              <button class="menu-item" @click=${() => this.openNormalAddFolderDialog()}>Add folder</button>
               <button class="menu-item" @click=${() => this.openAddFolderDialog(null)}>Add root folder</button>
               <button class="menu-item danger" @click=${() => this.requestDeleteFolder(action.folderId)}>Delete folder</button>
             `
           : nothing}
         ${action.type === "add-folder"
           ? html`
-              <button class="menu-item" @click=${() => this.openNormalAddFolderDialog()}>Add folder</button>
-              <button class="menu-item" @click=${() => this.openAddFolderDialog(null)}>Add root folder</button>
-            `
-          : nothing}
-        ${action.type === "add-subfolder"
-          ? html`
-              <button class="menu-item" @click=${() => this.openAddFolderDialog(action.folderId)}>Add subfolder</button>
-              <button class="menu-item" @click=${() => this.openNormalAddFolderDialog()}>Add folder</button>
               <button class="menu-item" @click=${() => this.openAddFolderDialog(null)}>Add root folder</button>
             `
           : nothing}

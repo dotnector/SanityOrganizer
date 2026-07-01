@@ -1,5 +1,6 @@
 import { OrganizerState } from "../../app/domain/OrganizerState";
 import { OrganizerStateSanitizer } from "../../app/services/OrganizerStateSanitizer";
+import { Logger } from "../Logger";
 
 /**
 Persists and restores mock organizer state in browser localStorage with sanitization.
@@ -15,18 +16,18 @@ export class BrowserStorageStateStore {
   }
 
   public load(orCreate: () => OrganizerState): OrganizerState {
-    console.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:start`, {
+    Logger.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:start`, {
       storageKey: this.storageKey,
     });
     const raw = window.localStorage.getItem(this.storageKey);
     if (!raw) {
-      console.warn(`${BrowserStorageStateStore.LOG_PREFIX} load:missing`, {
+      Logger.warn(`${BrowserStorageStateStore.LOG_PREFIX} load:missing`, {
         storageKey: this.storageKey,
         reason: "No state found. Seeding initial state.",
       });
       const seeded = orCreate();
       this.save(seeded);
-      console.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:seeded`, {
+      Logger.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:seeded`, {
         folderCount: Object.keys(seeded.folders).length,
         rootFolderCount: seeded.rootFolderIds.length,
       });
@@ -35,7 +36,7 @@ export class BrowserStorageStateStore {
 
     try {
       const sanitized = this.sanitizer.sanitize(JSON.parse(raw));
-      console.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:success`, {
+      Logger.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:success`, {
         storageKey: this.storageKey,
         rawLength: raw.length,
         folderCount: Object.keys(sanitized.folders).length,
@@ -43,13 +44,13 @@ export class BrowserStorageStateStore {
       });
       return sanitized;
     } catch (error) {
-      console.error(`${BrowserStorageStateStore.LOG_PREFIX} load:parse-error`, {
+      Logger.error(`${BrowserStorageStateStore.LOG_PREFIX} load:parse-error`, {
         storageKey: this.storageKey,
         rawPreview: raw.slice(0, 200),
       }, error);
       const seeded = orCreate();
       this.save(seeded);
-      console.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:reseeded-after-error`, {
+      Logger.debug(`${BrowserStorageStateStore.LOG_PREFIX} load:reseeded-after-error`, {
         folderCount: Object.keys(seeded.folders).length,
         rootFolderCount: seeded.rootFolderIds.length,
       });
@@ -58,7 +59,7 @@ export class BrowserStorageStateStore {
   }
 
   public save(state: OrganizerState): void {
-    console.debug(`${BrowserStorageStateStore.LOG_PREFIX} save:start`, {
+    Logger.debug(`${BrowserStorageStateStore.LOG_PREFIX} save:start`, {
       storageKey: this.storageKey,
       folderCount: Object.keys(state.folders).length,
       rootFolderCount: state.rootFolderIds.length,
@@ -66,12 +67,12 @@ export class BrowserStorageStateStore {
     try {
       const serialized = JSON.stringify(state);
       window.localStorage.setItem(this.storageKey, serialized);
-      console.debug(`${BrowserStorageStateStore.LOG_PREFIX} save:success`, {
+      Logger.debug(`${BrowserStorageStateStore.LOG_PREFIX} save:success`, {
         storageKey: this.storageKey,
         serializedLength: serialized.length,
       });
     } catch (error) {
-      console.error(`${BrowserStorageStateStore.LOG_PREFIX} save:error`, {
+      Logger.error(`${BrowserStorageStateStore.LOG_PREFIX} save:error`, {
         storageKey: this.storageKey,
       }, error);
       throw error;

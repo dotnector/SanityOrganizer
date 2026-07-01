@@ -1,6 +1,6 @@
 {
   "name": "Sanity Organizer",
-  "content_in_root": true,
+  "content_in_root": false,
   "filename": "dist/sanity-organizer.js",
   "render_readme": true,
   "homeassistant": "2024.1.0"

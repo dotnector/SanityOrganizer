@@ -39,7 +39,7 @@ Sanity Organizer is a Home Assistant custom panel that lets you organize Home As
 
 ## Installation (HACS)
 
-1. Add this repository as a custom repository in HACS with category `Frontend`.
+1. Add this repository as a custom repository in HACS with category `Dashboard`.
 2. Install `Sanity Organizer` from HACS.
 3. Restart Home Assistant.
 4. Add to `configuration.yaml`:

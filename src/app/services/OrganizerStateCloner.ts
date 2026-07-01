@@ -27,6 +27,7 @@ export class OrganizerStateCloner {
       folders,
       [...state.rootFolderIds],
       [...state.expandedFolderIds],
+      state.selectedFolderId,
       new OrganizerSettings(
         state.settings.sortMode,
         state.settings.autoRefreshSeconds,

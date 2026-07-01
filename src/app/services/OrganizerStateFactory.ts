@@ -6,6 +6,6 @@ import { OrganizerState } from "../domain/OrganizerState";
  */
 export class OrganizerStateFactory {
   public createInitial(): OrganizerState {
-    return new OrganizerState({}, [], [], OrganizerSettings.createDefault());
+    return new OrganizerState({}, [], [], null, OrganizerSettings.createDefault());
   }
 }

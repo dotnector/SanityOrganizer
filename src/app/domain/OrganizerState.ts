@@ -9,18 +9,21 @@ export class OrganizerState {
   public folders: Record<string, FolderNode>;
   public rootFolderIds: string[];
   public expandedFolderIds: string[];
+  public selectedFolderId: string | null;
   public settings: OrganizerSettings;
 
   public constructor(
     folders: Record<string, FolderNode>,
     rootFolderIds: string[],
     expandedFolderIds: string[],
+    selectedFolderId: string | null,
     settings: OrganizerSettings,
   ) {
     this.version = 1;
     this.folders = folders;
     this.rootFolderIds = rootFolderIds;
     this.expandedFolderIds = expandedFolderIds;
+    this.selectedFolderId = selectedFolderId;
     this.settings = settings;
   }
 }

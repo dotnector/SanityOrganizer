@@ -29,6 +29,7 @@ export class OrganizerStateSanitizer {
     const expandedFolderIds = this.isStringArray(value.expandedFolderIds)
       ? value.expandedFolderIds
       : [];
+    const selectedFolderId = typeof value.selectedFolderId === "string" ? value.selectedFolderId : null;
 
     // Clamp settings to safe values so corrupted storage does not break runtime behavior.
     const rawSettings = this.isObject(value.settings) ? value.settings : {};
@@ -88,6 +89,7 @@ export class OrganizerStateSanitizer {
       folders,
       rootFolderIds,
       expandedFolderIds,
+      selectedFolderId && selectedFolderId in folders ? selectedFolderId : rootFolderIds[0] ?? null,
       new OrganizerSettings(sortMode, autoRefreshSeconds, openTarget),
     );
   }

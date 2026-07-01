@@ -54,6 +54,7 @@ export class MockStateSeeder {
       folders,
       rootFolderIds,
       expandedFolderIds,
+      "favorites",
       new OrganizerSettings("typeThenName", 60, "new-tab"),
     );
   }

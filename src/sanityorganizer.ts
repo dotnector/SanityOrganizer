@@ -171,7 +171,7 @@ export class SanityOrganizer extends LitElement {
       ]);
       this.organizerState = storedState;
       this.catalog = catalog;
-      this.selectedFolderId = this.selectedFolderId ?? storedState.rootFolderIds[0] ?? null;
+      this.selectedFolderId = this.resolveSelectedFolderId(storedState, storedState.selectedFolderId);
       console.debug(`${SanityOrganizer.LOG_PREFIX} initializePanel:success`, {
         folderCount: Object.keys(storedState.folders).length,
         rootFolderCount: storedState.rootFolderIds.length,
@@ -221,6 +221,24 @@ export class SanityOrganizer extends LitElement {
     const draft = this.stateCloner.clone(this.organizerState);
     mutator(draft);
     void this.persistState(draft);
+  }
+
+  private resolveSelectedFolderId(state: OrganizerState, preferredFolderId: string | null): string | null {
+    if (preferredFolderId && state.folders[preferredFolderId]) {
+      return preferredFolderId;
+    }
+    return state.rootFolderIds.find((folderId) => Boolean(state.folders[folderId])) ?? null;
+  }
+
+  private selectFolder(folderId: string | null): void {
+    const nextFolderId = this.resolveSelectedFolderId(this.organizerState, folderId);
+    this.selectedFolderId = nextFolderId;
+    if (this.organizerState.selectedFolderId === nextFolderId) {
+      return;
+    }
+    this.mutateState((draft) => {
+      draft.selectedFolderId = this.resolveSelectedFolderId(draft, folderId);
+    });
   }
 
   private isExpanded(folderId: string): boolean {
@@ -300,6 +318,7 @@ export class SanityOrganizer extends LitElement {
       const folderId = uid("folder");
       this.mutateState((draft) => {
         this.treeService.createFolder(draft, dialog.parentId, folderId, name, icon);
+        draft.selectedFolderId = folderId;
       });
       this.selectedFolderId = folderId;
     } else if (dialog.folderId) {
@@ -320,9 +339,12 @@ export class SanityOrganizer extends LitElement {
       let removeIds = new Set<string>();
       this.mutateState((draft) => {
         removeIds = this.treeService.deleteFolder(draft, folderId);
+        if (draft.selectedFolderId && removeIds.has(draft.selectedFolderId)) {
+          draft.selectedFolderId = this.resolveSelectedFolderId(draft, null);
+        }
       });
       if (this.selectedFolderId && removeIds.has(this.selectedFolderId)) {
-        this.selectedFolderId = null;
+        this.selectedFolderId = this.resolveSelectedFolderId(this.organizerState, null);
       }
       return;
     }
@@ -344,9 +366,12 @@ export class SanityOrganizer extends LitElement {
       let removeIds = new Set<string>();
       this.mutateState((draft) => {
         removeIds = this.treeService.deleteFolder(draft, folderId);
+        if (draft.selectedFolderId && removeIds.has(draft.selectedFolderId)) {
+          draft.selectedFolderId = this.resolveSelectedFolderId(draft, null);
+        }
       });
       if (this.selectedFolderId && removeIds.has(this.selectedFolderId)) {
-        this.selectedFolderId = null;
+        this.selectedFolderId = this.resolveSelectedFolderId(this.organizerState, null);
       }
     }
   }
@@ -677,9 +702,7 @@ export class SanityOrganizer extends LitElement {
           @dragover=${(e: DragEvent) => this.onFolderDragOver(e, folderId)}
           @dragleave=${(e: DragEvent) => this.onFolderDragLeave(e, folderId)}
           @drop=${(e: DragEvent) => this.onDropToFolder(e, folderId)}
-          @click=${() => {
-            this.selectedFolderId = folderId;
-          }}
+          @click=${() => this.selectFolder(folderId)}
           @contextmenu=${(e: MouseEvent) => {
             e.stopPropagation();
             this.showContextMenu(e, folder.name, { type: "rename-folder", folderId });

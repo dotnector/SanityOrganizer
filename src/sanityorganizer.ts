@@ -440,9 +440,6 @@ export class SanityOrganizer extends LitElement {
     if (this.settings.openTarget === "this-tab") {
       return "_self";
     }
-    if (this.settings.openTarget === "same-other-tab") {
-      return "sanity_organizer";
-    }
     return "_blank";
   }
 
@@ -450,7 +447,7 @@ export class SanityOrganizer extends LitElement {
     return this.settings.openTarget === "new-tab" ? "noopener noreferrer" : "";
   }
 
-  private onFolderItemNameClick(event: Event): void {
+  private onFolderItemNameClick(event: MouseEvent): void {
     event.stopPropagation();
   }
 
@@ -646,8 +643,7 @@ export class SanityOrganizer extends LitElement {
 
   private onOpenTargetChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    const openTarget =
-      value === "this-tab" || value === "same-other-tab" ? value : "new-tab";
+    const openTarget = value === "this-tab" ? "this-tab" : "new-tab";
     this.mutateState((draft) => {
       draft.settings.openTarget = openTarget;
     });
@@ -871,7 +867,6 @@ export class SanityOrganizer extends LitElement {
                     <select class="dialog-input" .value=${this.settings.openTarget} @change=${this.onOpenTargetChange}>
                       <option value="new-tab">New tab</option>
                       <option value="this-tab">This tab</option>
-                      <option value="same-other-tab">Same other tab</option>
                     </select>
                   </label>
                   <label>
@@ -1031,7 +1026,7 @@ export class SanityOrganizer extends LitElement {
                                   href=${this.editorPathFor(object)}
                                   target=${this.editorTarget()}
                                   rel=${this.editorRel()}
-                                  @click=${(e: Event) => this.onFolderItemNameClick(e)}
+                                  @click=${(e: MouseEvent) => this.onFolderItemNameClick(e)}
                                 >
                                   ${object.displayName}
                                 </a>

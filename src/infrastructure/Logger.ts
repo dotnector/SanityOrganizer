@@ -1,4 +1,4 @@
-const loggingEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOGS === "false";
+const loggingEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOGS === "true";
 
 /**
  * Centralized logging wrapper so debug output can be disabled in production builds.

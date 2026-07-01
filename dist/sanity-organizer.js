@@ -752,7 +752,7 @@ var U = class {
 	sanitize(e) {
 		let t = this.factory.createInitial();
 		if (!this.isObject(e)) return t;
-		let n = this.isObject(e.folders) ? e.folders : {}, r = this.isStringArray(e.rootFolderIds) ? e.rootFolderIds : [], i = this.isStringArray(e.expandedFolderIds) ? e.expandedFolderIds : [], a = typeof e.selectedFolderId == "string" ? e.selectedFolderId : null, o = this.isObject(e.settings) ? e.settings : {}, s = o.sortMode === "name" ? "name" : t.settings.sortMode, c = typeof o.autoRefreshSeconds == "number" && Number.isFinite(o.autoRefreshSeconds) ? Math.round(o.autoRefreshSeconds) : t.settings.autoRefreshSeconds, l = Math.max(0, Math.min(600, c)), u = o.openTarget === "this-tab" || o.openTarget === "same-other-tab" ? o.openTarget : t.settings.openTarget, d = {};
+		let n = this.isObject(e.folders) ? e.folders : {}, r = this.isStringArray(e.rootFolderIds) ? e.rootFolderIds : [], i = this.isStringArray(e.expandedFolderIds) ? e.expandedFolderIds : [], a = typeof e.selectedFolderId == "string" ? e.selectedFolderId : null, o = this.isObject(e.settings) ? e.settings : {}, s = o.sortMode === "name" ? "name" : t.settings.sortMode, c = typeof o.autoRefreshSeconds == "number" && Number.isFinite(o.autoRefreshSeconds) ? Math.round(o.autoRefreshSeconds) : t.settings.autoRefreshSeconds, l = Math.max(0, Math.min(600, c)), u = o.openTarget === "this-tab" ? "this-tab" : t.settings.openTarget, d = {};
 		for (let [e, t] of Object.entries(n)) this.isObject(t) && (d[e] = new W(e, typeof t.name == "string" && t.name.trim() ? t.name : "Folder", typeof t.icon == "string" && t.icon.trim() ? t.icon : "mdi:folder-outline", typeof t.parentId == "string" ? t.parentId : null, this.isStringArray(t.children) ? t.children : [], (Array.isArray(t.objects) ? t.objects : []).filter((e) => this.isObject(e)).map((e) => {
 			let t = typeof e.itemKey == "string" ? e.itemKey : typeof e.objectId == "string" ? e.objectId : "", n = typeof e.haId == "string" ? e.haId : typeof e.refId == "string" ? e.refId : "";
 			return new U(t, this.parseObjectType(e.type), n);
@@ -777,11 +777,21 @@ var U = class {
 		return Array.isArray(e) && e.every((e) => typeof e == "string");
 	}
 }, X = class {
-	static debug(e, ...t) {}
-	static info(e, ...t) {}
-	static log(e, ...t) {}
-	static warn(e, ...t) {}
-	static error(e, ...t) {}
+	static debug(e, ...t) {
+		console.debug(e, ...t);
+	}
+	static info(e, ...t) {
+		console.info(e, ...t);
+	}
+	static log(e, ...t) {
+		console.log(e, ...t);
+	}
+	static warn(e, ...t) {
+		console.warn(e, ...t);
+	}
+	static error(e, ...t) {
+		console.error(e, ...t);
+	}
 }, Pe = class e {
 	static {
 		this.STORAGE_KEY = "sanity_organizer";
@@ -1427,7 +1437,7 @@ var $ = class extends B {
 		return e.type === "automation" ? e.editorId ? `/config/automation/edit/${encodeURIComponent(e.editorId)}` : `/config/automation/show/${encodeURIComponent(e.haId)}` : e.type === "scene" ? e.editorId ? `/config/scene/edit/${encodeURIComponent(e.editorId)}` : `/history?entity_id=${encodeURIComponent(e.haId)}` : e.type === "script" ? e.editorId ? `/config/script/edit/${encodeURIComponent(e.editorId)}` : `/config/script/show/${encodeURIComponent(e.haId)}` : e.type === "device" ? `/config/devices/device/${encodeURIComponent(e.haId)}` : e.type === "entity" || e.type === "helper" ? `/history?entity_id=${encodeURIComponent(e.haId)}` : "/config";
 	}
 	editorTarget() {
-		return this.settings.openTarget === "this-tab" ? "_self" : this.settings.openTarget === "same-other-tab" ? "sanity_organizer" : "_blank";
+		return this.settings.openTarget === "this-tab" ? "_self" : "_blank";
 	}
 	editorRel() {
 		return this.settings.openTarget === "new-tab" ? "noopener noreferrer" : "";
@@ -1541,9 +1551,9 @@ var $ = class extends B {
 		});
 	}
 	onOpenTargetChange(e) {
-		let t = e.target.value, n = t === "this-tab" || t === "same-other-tab" ? t : "new-tab";
+		let t = e.target.value === "this-tab" ? "this-tab" : "new-tab";
 		this.mutateState((e) => {
-			e.settings.openTarget = n;
+			e.settings.openTarget = t;
 		});
 	}
 	onAutoRefreshChange(e) {
@@ -1720,7 +1730,6 @@ var $ = class extends B {
                     <select class="dialog-input" .value=${this.settings.openTarget} @change=${this.onOpenTargetChange}>
                       <option value="new-tab">New tab</option>
                       <option value="this-tab">This tab</option>
-                      <option value="same-other-tab">Same other tab</option>
                     </select>
                   </label>
                   <label>

@@ -1,5 +1,5 @@
 export type SortMode = "typeThenName" | "name";
-export type OpenTarget = "new-tab" | "this-tab" | "same-other-tab";
+export type OpenTarget = "new-tab" | "this-tab";
 
 /**
  * Defines organizer preferences such as icon defaults, sort mode, and refresh interval.

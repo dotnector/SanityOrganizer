@@ -39,10 +39,7 @@ export class OrganizerStateSanitizer {
         ? Math.round(rawSettings.autoRefreshSeconds)
         : defaults.settings.autoRefreshSeconds;
     const autoRefreshSeconds = Math.max(0, Math.min(600, autoRefreshSecondsRaw));
-    const openTarget =
-      rawSettings.openTarget === "this-tab" || rawSettings.openTarget === "same-other-tab"
-        ? rawSettings.openTarget
-        : defaults.settings.openTarget;
+    const openTarget = rawSettings.openTarget === "this-tab" ? "this-tab" : defaults.settings.openTarget;
 
     // Rebuild folders entry-by-entry and coerce each field into a valid shape.
     const folders: Record<string, FolderNode> = {};

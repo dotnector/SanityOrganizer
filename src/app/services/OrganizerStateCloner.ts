@@ -19,7 +19,7 @@ export class OrganizerStateCloner {
         folder.icon,
         folder.parentId,
         [...folder.children],
-        folder.objects.map((obj) => new FolderHaItemRef(obj.objectId, obj.type, obj.refId)),
+        folder.objects.map((obj) => new FolderHaItemRef(obj.itemKey, obj.type, obj.haId)),
       );
     }
 

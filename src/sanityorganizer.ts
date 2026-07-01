@@ -18,7 +18,7 @@ import { HomeAssistantOrganizerRuntime } from "./infrastructure/homeassistant/Ho
 
 type DragPayload =
   | { kind: "folder"; folderId: string }
-  | { kind: "object"; objectId: string; fromFolderId: string | null };
+  | { kind: "object"; itemKey: string; fromFolderId: string | null };
 
 type FolderDialogState = {
   mode: "add" | "rename";
@@ -40,7 +40,7 @@ type ContextAction =
   | { type: "add-folder"; folderId: string | null }
   | { type: "add-subfolder"; folderId: string }
   | { type: "add-root-folder" }
-  | { type: "remove-object"; folderId: string; objectId: string };
+  | { type: "remove-object"; folderId: string; itemKey: string };
 
 const ROOT_DROP_ID = "__root__";
 const FALLBACK_MDI_PATHS: Record<string, string> = {
@@ -81,7 +81,7 @@ export class SanityOrganizer extends LitElement {
   @state() private errorText = "";
   @state() private selectedFolderId: string | null = null;
   @state() private selectedObjectIds = new Set<string>();
-  @state() private lastSelectedObjectId: string | null = null;
+  @state() private lastSelectedItemKey: string | null = null;
   @state() private search = "";
   @state() private showSettings = false;
   @state() private contextMenu:
@@ -379,40 +379,40 @@ export class SanityOrganizer extends LitElement {
       this.treeService.addObjectsToFolder(draft, selectedFolderId, objects);
     });
     this.selectedObjectIds = new Set<string>();
-    this.lastSelectedObjectId = null;
+    this.lastSelectedItemKey = null;
   }
 
-  private removeObjectFromFolder(folderId: string, objectId: string): void {
+  private removeObjectFromFolder(folderId: string, itemKey: string): void {
     this.mutateState((draft) => {
-      this.treeService.removeObjectFromFolder(draft, folderId, objectId);
+      this.treeService.removeObjectFromFolder(draft, folderId, itemKey);
     });
   }
 
   private getFilteredObjectIds(): string[] {
-    return this.filteredObjects().map((entry) => entry.objectId);
+    return this.filteredObjects().map((entry) => entry.itemKey);
   }
 
-  private onSourceSelectClick(event: MouseEvent, objectId: string): void {
+  private onSourceSelectClick(event: MouseEvent, itemKey: string): void {
     event.stopPropagation();
     const orderedIds = this.getFilteredObjectIds();
     const next = this.selectionService.onRowClick(
       this.selectedObjectIds,
       orderedIds,
-      objectId,
-      this.lastSelectedObjectId,
+      itemKey,
+      this.lastSelectedItemKey,
       event.shiftKey,
       event.ctrlKey || event.metaKey,
     );
     this.selectedObjectIds = next;
-    this.lastSelectedObjectId = objectId;
+    this.lastSelectedItemKey = itemKey;
   }
 
-  private onSourceCheckboxToggle(event: Event, objectId: string): void {
+  private onSourceCheckboxToggle(event: Event, itemKey: string): void {
     event.stopPropagation();
     const checked = (event.target as HTMLInputElement).checked;
-    const next = this.selectionService.onCheckboxToggle(this.selectedObjectIds, objectId, checked);
+    const next = this.selectionService.onCheckboxToggle(this.selectedObjectIds, itemKey, checked);
     this.selectedObjectIds = next;
-    this.lastSelectedObjectId = objectId;
+    this.lastSelectedItemKey = itemKey;
   }
 
   private onSourceKeyDown(event: KeyboardEvent): void {
@@ -513,11 +513,11 @@ export class SanityOrganizer extends LitElement {
     if (payload.kind === "object") {
       if (!targetFolderId) {
         if (payload.fromFolderId) {
-          this.removeObjectFromFolder(payload.fromFolderId, payload.objectId);
+          this.removeObjectFromFolder(payload.fromFolderId, payload.itemKey);
         }
         return;
       }
-      const object = this.catalog.byId.get(payload.objectId);
+      const object = this.catalog.byId.get(payload.itemKey);
       if (object) {
         this.addObjectToFolder(targetFolderId, object);
       }
@@ -558,7 +558,7 @@ export class SanityOrganizer extends LitElement {
     } else if (action.type === "add-root-folder") {
       this.openAddFolderDialog(null);
     } else if (action.type === "remove-object") {
-      this.removeObjectFromFolder(action.folderId, action.objectId);
+      this.removeObjectFromFolder(action.folderId, action.itemKey);
     }
   }
 
@@ -901,25 +901,25 @@ export class SanityOrganizer extends LitElement {
                 ${visibleObjects.map(
                   (object) => html`
                     <div
-                      class="list-item ${this.selectedObjectIds.has(object.objectId) ? "selected" : ""}"
+                      class="list-item ${this.selectedObjectIds.has(object.itemKey) ? "selected" : ""}"
                       draggable="true"
                       @dragstart=${(e: DragEvent) =>
                         this.onDragStart(e, {
                           kind: "object",
-                          objectId: object.objectId,
+                          itemKey: object.itemKey,
                           fromFolderId: null,
                         })}
-                      @click=${(e: MouseEvent) => this.onSourceSelectClick(e, object.objectId)}
+                      @click=${(e: MouseEvent) => this.onSourceSelectClick(e, object.itemKey)}
                     >
                       <input
                         type="checkbox"
-                        .checked=${this.selectedObjectIds.has(object.objectId)}
-                        @change=${(e: Event) => this.onSourceCheckboxToggle(e, object.objectId)}
+                        .checked=${this.selectedObjectIds.has(object.itemKey)}
+                        @change=${(e: Event) => this.onSourceCheckboxToggle(e, object.itemKey)}
                       />
                       ${this.renderIcon(object.icon)}
                       <div>
                         <div>${object.displayName}</div>
-                        <div class="meta">${object.type} - ${object.refId}</div>
+                        <div class="meta">${object.type} - ${object.haId}</div>
                       </div>
                     </div>
                   `,
@@ -959,24 +959,24 @@ export class SanityOrganizer extends LitElement {
                             @dragstart=${(e: DragEvent) =>
                               this.onDragStart(e, {
                                 kind: "object",
-                                objectId: object.objectId,
+                                itemKey: object.itemKey,
                                 fromFolderId: selectedFolder.id,
                               })}
                             @contextmenu=${(e: MouseEvent) =>
                               this.showContextMenu(e, object.displayName, {
                                 type: "remove-object",
                                 folderId: selectedFolder.id,
-                                objectId: object.objectId,
+                                itemKey: object.itemKey,
                               })}
                           >
                             ${this.renderIcon(object.icon)}
                             <div>
                               <div>${object.displayName}</div>
-                              <div class="meta">${object.type} - ${object.refId}</div>
+                              <div class="meta">${object.type} - ${object.haId}</div>
                             </div>
                             <button
                               class="icon-button"
-                              @click=${() => this.removeObjectFromFolder(selectedFolder.id, object.objectId)}
+                              @click=${() => this.removeObjectFromFolder(selectedFolder.id, object.itemKey)}
                             >
                               ${this.renderIcon("mdi:close")}
                             </button>

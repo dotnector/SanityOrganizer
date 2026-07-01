@@ -40,12 +40,12 @@ export class MockStateSeeder {
     const scripts = all.filter((item) => item.type === HaItemType.Script).slice(0, 4);
     const scenes = all.filter((item) => item.type === HaItemType.Scene).slice(0, 4);
 
-    folders.favorites.objects.push(...devices.map((item) => new FolderHaItemRef(item.objectId, item.type, item.refId)));
-    folders["room-kitchen"].objects.push(...entities.slice(0, 5).map((item) => new FolderHaItemRef(item.objectId, item.type, item.refId)));
-    folders["deep-3"].objects.push(...helpers.map((item) => new FolderHaItemRef(item.objectId, item.type, item.refId)));
-    folders["favorites-scripts"].objects.push(...scripts.map((item) => new FolderHaItemRef(item.objectId, item.type, item.refId)));
-    folders.archive.objects.push(...automations.map((item) => new FolderHaItemRef(item.objectId, item.type, item.refId)));
-    folders.archive.objects.push(...scenes.map((item) => new FolderHaItemRef(item.objectId, item.type, item.refId)));
+    folders.favorites.objects.push(...devices.map((item) => new FolderHaItemRef(item.itemKey, item.type, item.haId)));
+    folders["room-kitchen"].objects.push(...entities.slice(0, 5).map((item) => new FolderHaItemRef(item.itemKey, item.type, item.haId)));
+    folders["deep-3"].objects.push(...helpers.map((item) => new FolderHaItemRef(item.itemKey, item.type, item.haId)));
+    folders["favorites-scripts"].objects.push(...scripts.map((item) => new FolderHaItemRef(item.itemKey, item.type, item.haId)));
+    folders.archive.objects.push(...automations.map((item) => new FolderHaItemRef(item.itemKey, item.type, item.haId)));
+    folders.archive.objects.push(...scenes.map((item) => new FolderHaItemRef(item.itemKey, item.type, item.haId)));
 
     folders["deep-8"].objects.push(new FolderHaItemRef("entity:sensor.missing_energy_total", HaItemType.Entity, "sensor.missing_energy_total"));
     folders["deep-8"].objects.push(new FolderHaItemRef("device:dev-missing-9000", HaItemType.Device, "dev-missing-9000"));

@@ -43,7 +43,7 @@ export class MockCatalogFactory {
     for (let index = 1; index <= count; index += 1) {
       const id = `dev-${index.toString().padStart(4, "0")}`;
       const displayName = `Kitchen Sensor ${((index - 1) % 7) + 1}`;
-      const secondary = `${manufacturers[index % manufacturers.length]} - ${models[index % models.length]}`;
+      const subtitle = `${manufacturers[index % manufacturers.length]} - ${models[index % models.length]}`;
       byId.set(
         `device:${id}`,
         new HaItem(
@@ -53,7 +53,7 @@ export class MockCatalogFactory {
           displayName,
           MockCatalogFactory.ICONS[HaItemType.Device],
           undefined,
-          secondary,
+          subtitle,
         ),
       );
     }

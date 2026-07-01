@@ -64,12 +64,22 @@ export class OrganizerStateSanitizer {
       const objects = rawObjects
         .filter((obj) => this.isObject(obj))
         .map((obj) => {
-          const objectId = typeof obj.objectId === "string" ? obj.objectId : "";
-          const refId = typeof obj.refId === "string" ? obj.refId : "";
+          const itemKey =
+            typeof obj.itemKey === "string"
+              ? obj.itemKey
+              : typeof obj.objectId === "string"
+                ? obj.objectId
+                : "";
+          const haId =
+            typeof obj.haId === "string"
+              ? obj.haId
+              : typeof obj.refId === "string"
+                ? obj.refId
+                : "";
           const type = this.parseObjectType(obj.type);
-          return new FolderHaItemRef(objectId, type, refId);
+          return new FolderHaItemRef(itemKey, type, haId);
         })
-        .filter((obj) => obj.objectId.length > 0 && obj.refId.length > 0);
+        .filter((obj) => obj.itemKey.length > 0 && obj.haId.length > 0);
 
       folders[id] = new FolderNode(id, name, icon, parentId, children, objects);
     }

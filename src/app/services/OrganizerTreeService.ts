@@ -120,10 +120,10 @@ export class OrganizerTreeService {
     if (!folder) {
       return;
     }
-    if (folder.objects.some((entry) => entry.objectId === object.objectId)) {
+    if (folder.objects.some((entry) => entry.itemKey === object.itemKey)) {
       return;
     }
-    folder.objects.push(new FolderHaItemRef(object.objectId, object.type, object.refId));
+    folder.objects.push(new FolderHaItemRef(object.itemKey, object.type, object.haId));
   }
 
   public addObjectsToFolder(state: OrganizerState, folderId: string, objects: HaItem[]): void {
@@ -132,24 +132,24 @@ export class OrganizerTreeService {
       return;
     }
     for (const object of objects) {
-      if (folder.objects.some((entry) => entry.objectId === object.objectId)) {
+      if (folder.objects.some((entry) => entry.itemKey === object.itemKey)) {
         continue;
       }
-      folder.objects.push(new FolderHaItemRef(object.objectId, object.type, object.refId));
+      folder.objects.push(new FolderHaItemRef(object.itemKey, object.type, object.haId));
     }
   }
 
-  public removeObjectFromFolder(state: OrganizerState, folderId: string, objectId: string): void {
+  public removeObjectFromFolder(state: OrganizerState, folderId: string, itemKey: string): void {
     const folder = state.folders[folderId];
     if (!folder) {
       return;
     }
-    folder.objects = folder.objects.filter((obj) => obj.objectId !== objectId);
+    folder.objects = folder.objects.filter((obj) => obj.itemKey !== itemKey);
   }
 
-  public removeObjectEverywhere(state: OrganizerState, objectId: string): void {
+  public removeObjectEverywhere(state: OrganizerState, itemKey: string): void {
     for (const folder of Object.values(state.folders)) {
-      folder.objects = folder.objects.filter((obj) => obj.objectId !== objectId);
+      folder.objects = folder.objects.filter((obj) => obj.itemKey !== itemKey);
     }
   }
 

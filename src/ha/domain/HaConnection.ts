@@ -25,4 +25,5 @@ export interface HaEntityRegistryEntry {
   original_name?: string | null;
   device_id?: string | null;
   platform?: string;
+  unique_id?: string | null;
 }

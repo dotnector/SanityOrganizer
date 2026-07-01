@@ -77,7 +77,6 @@ export class SanityOrganizer extends LitElement {
   @state() private organizerState: OrganizerState = new OrganizerStateFactory().createInitial();
   @state() private catalog: HaItemCatalog = new HaItemCatalog(new Map(), []);
   @state() private loading = true;
-  @state() private saving = false;
   @state() private errorText = "";
   @state() private selectedFolderId: string | null = null;
   @state() private selectedObjectIds = new Set<string>();
@@ -207,7 +206,6 @@ export class SanityOrganizer extends LitElement {
       folderCount: Object.keys(nextState.folders).length,
       rootFolderCount: nextState.rootFolderIds.length,
     });
-    this.saving = true;
     try {
       await this.runtime.saveState(nextState);
       this.errorText = "";
@@ -216,7 +214,6 @@ export class SanityOrganizer extends LitElement {
       this.errorText = `Failed to persist changes: ${error instanceof Error ? error.message : String(error)}`;
       console.error(`${SanityOrganizer.LOG_PREFIX} persistState:error`, error);
     } finally {
-      this.saving = false;
     }
   }
 
@@ -389,10 +386,28 @@ export class SanityOrganizer extends LitElement {
   }
 
   private editorPathFor(item: HaItem): string {
+    if (item.type === "automation") {
+      return item.editorId
+        ? `/config/automation/edit/${encodeURIComponent(item.editorId)}`
+        : `/config/automation/show/${encodeURIComponent(item.haId)}`;
+    }
+    if (item.type === "scene") {
+      return item.editorId
+        ? `/config/scene/edit/${encodeURIComponent(item.editorId)}`
+        : `/history?entity_id=${encodeURIComponent(item.haId)}`;
+    }
+    if (item.type === "script") {
+      return item.editorId
+        ? `/config/script/edit/${encodeURIComponent(item.editorId)}`
+        : `/config/script/show/${encodeURIComponent(item.haId)}`;
+    }
     if (item.type === "device") {
       return `/config/devices/device/${encodeURIComponent(item.haId)}`;
     }
-    return `/config/entities/entity/${encodeURIComponent(item.haId)}`;
+    if (item.type === "entity" || item.type === "helper") {
+      return `/history?entity_id=${encodeURIComponent(item.haId)}`;
+    }
+    return "/config";
   }
 
   private editorTarget(): string {

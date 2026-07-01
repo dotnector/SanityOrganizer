@@ -49,6 +49,7 @@ export class HaCatalogService {
     ]);
 
     const byId = new Map<string, HaItem>();
+    const entityRegistryById = new Map(entityRegistry.map((entry) => [entry.entity_id, entry]));
 
     for (const device of devices) {
       const displayName = device.name_by_user || device.name || `Device ${device.id}`;
@@ -62,6 +63,7 @@ export class HaCatalogService {
           HaCatalogService.ICONS[HaItemType.Device],
           undefined,
           [device.manufacturer, device.model].filter(Boolean).join(" - ") || undefined,
+          device.id,
         ),
       );
     }
@@ -85,6 +87,8 @@ export class HaCatalogService {
             displayName,
             HaCatalogService.ICONS[HaItemType.Helper],
             domain,
+            undefined,
+            entry.entity_id,
           ),
         );
         continue;
@@ -100,6 +104,8 @@ export class HaCatalogService {
             displayName,
             HaCatalogService.ICONS[HaItemType.Entity],
             domain,
+            undefined,
+            entry.entity_id,
           ),
         );
       }
@@ -108,6 +114,7 @@ export class HaCatalogService {
     for (const [entityId, stateObj] of Object.entries(this.connection.states)) {
       const domain = this.entityDomain(entityId);
       const displayName = this.displayEntityName(entityId, stateObj.attributes);
+      const entityEntry = entityRegistryById.get(entityId);
       if (domain === "automation") {
         byId.set(
           `automation:${entityId}`,
@@ -118,6 +125,8 @@ export class HaCatalogService {
             displayName,
             HaCatalogService.ICONS[HaItemType.Automation],
             domain,
+            undefined,
+            this.attributeString(stateObj.attributes, "id"),
           ),
         );
       } else if (domain === "script") {
@@ -130,6 +139,8 @@ export class HaCatalogService {
             displayName,
             HaCatalogService.ICONS[HaItemType.Script],
             domain,
+            undefined,
+            entityEntry?.unique_id ?? undefined,
           ),
         );
       } else if (domain === "scene") {
@@ -142,6 +153,8 @@ export class HaCatalogService {
             displayName,
             HaCatalogService.ICONS[HaItemType.Scene],
             domain,
+            undefined,
+            this.attributeString(stateObj.attributes, "id"),
           ),
         );
       }
@@ -168,5 +181,10 @@ export class HaCatalogService {
   private entityDomain(entityId: string): string {
     const idx = entityId.indexOf(".");
     return idx > 0 ? entityId.slice(0, idx) : "";
+  }
+
+  private attributeString(attrs: Record<string, unknown>, key: string): string | undefined {
+    const value = attrs[key];
+    return typeof value === "string" && value.length > 0 ? value : undefined;
   }
 }

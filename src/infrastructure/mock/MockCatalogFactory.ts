@@ -54,6 +54,7 @@ export class MockCatalogFactory {
           MockCatalogFactory.ICONS[HaItemType.Device],
           undefined,
           subtitle,
+          id,
         ),
       );
     }
@@ -77,6 +78,8 @@ export class MockCatalogFactory {
           displayName,
           MockCatalogFactory.ICONS[HaItemType.Entity],
           domain,
+          undefined,
+          entityId,
         ),
       );
     }
@@ -98,6 +101,8 @@ export class MockCatalogFactory {
           displayName,
           MockCatalogFactory.ICONS[HaItemType.Helper],
           domain,
+          undefined,
+          entityId,
         ),
       );
     }
@@ -114,6 +119,10 @@ export class MockCatalogFactory {
     for (let index = 1; index <= count; index += 1) {
       const entityId = `${domain}.${prefix}_${index.toString().padStart(4, "0")}`;
       const displayName = `${names[index % names.length]} ${((index - 1) % 9) + 1}`;
+      const editorId =
+        type === HaItemType.Automation || type === HaItemType.Scene
+          ? `${1782896022000 + index}`
+          : `script_${index.toString().padStart(4, "0")}`;
       byId.set(
         `${type}:${entityId}`,
         new HaItem(
@@ -123,6 +132,8 @@ export class MockCatalogFactory {
           displayName,
           MockCatalogFactory.ICONS[type],
           domain,
+          undefined,
+          editorId,
         ),
       );
     }

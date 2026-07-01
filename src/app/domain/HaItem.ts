@@ -7,6 +7,7 @@ export class HaItem {
   public readonly itemKey: string;
   public readonly type: HaItemTypeValue;
   public readonly haId: string;
+  public readonly editorId?: string;
   public readonly displayName: string;
   public readonly icon: string;
   public readonly domain?: string;
@@ -20,10 +21,12 @@ export class HaItem {
     icon: string,
     domain?: string,
     subtitle?: string,
+    editorId?: string,
   ) {
     this.itemKey = itemKey;
     this.type = type;
     this.haId = haId;
+    this.editorId = editorId;
     this.displayName = displayName;
     this.icon = icon;
     this.domain = domain;

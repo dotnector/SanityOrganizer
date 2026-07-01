@@ -1,10 +1,9 @@
-/// <summary>
-/// Defines organizer preferences such as icon defaults, sort mode, and refresh interval.
-/// </summary>
 export type SortMode = "typeThenName" | "name";
 export type OpenTarget = "new-tab" | "this-tab" | "same-other-tab";
 
-
+/**
+ * Defines organizer preferences such as icon defaults, sort mode, and refresh interval.
+ */
 export class OrganizerSettings {
   public sortMode: SortMode;
   public autoRefreshSeconds: number;

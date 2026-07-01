@@ -5,7 +5,7 @@ import { OrganizerStorageService } from "../../app/services/OrganizerStorageServ
 import { HaCatalogService } from "../../ha/services/HaCatalogService";
 import { HaRuntimeConnection } from "../../ha/services/HaRuntimeConnection";
 import type { HaConnection } from "../../ha/domain/HaConnection";
-import { Logger } from "../Logger";
+import { Logger } from "../Logger.ts";
 
 /**
 Implements organizer runtime operations backed by Home Assistant services.

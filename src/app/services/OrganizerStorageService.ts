@@ -1,7 +1,7 @@
 import { OrganizerState } from "../domain/OrganizerState";
 import { OrganizerStateSanitizer } from "./OrganizerStateSanitizer";
 import type { HaConnection } from "../../ha/domain/HaConnection";
-import { Logger } from "../../infrastructure/Logger";
+import { Logger } from "../../infrastructure/Logger.ts";
 
 /**
 Loads and saves organizer state through Home Assistant frontend user-data APIs.

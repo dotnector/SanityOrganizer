@@ -1,6 +1,6 @@
 import { OrganizerState } from "../../app/domain/OrganizerState";
 import { OrganizerStateSanitizer } from "../../app/services/OrganizerStateSanitizer";
-import { Logger } from "../Logger";
+import { Logger } from "../Logger.ts";
 
 /**
 Persists and restores mock organizer state in browser localStorage with sanitization.

@@ -2,7 +2,7 @@ import type { OrganizerRuntime } from "../../app/contracts/OrganizerRuntime";
 import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
 import { OrganizerState } from "../../app/domain/OrganizerState";
 import { BrowserStorageStateStore } from "./BrowserStorageStateStore";
-import { Logger } from "../Logger";
+import { Logger } from "../Logger.ts";
 import { MockCatalogFactory } from "./MockCatalogFactory";
 import type { MockDatasetSize } from "./MockDatasetSize";
 import { MockStateSeeder } from "./MockStateSeeder";

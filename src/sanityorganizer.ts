@@ -14,7 +14,7 @@ import { OrganizerTreeService } from "./app/services/OrganizerTreeService";
 import type { HaConnection } from "./ha/domain/HaConnection";
 import { RuntimeResolver } from "./infrastructure/RuntimeResolver";
 import { HomeAssistantOrganizerRuntime } from "./infrastructure/homeassistant/HomeAssistantOrganizerRuntime";
-import { Logger } from "./infrastructure/Logger";
+import { Logger } from "./infrastructure/Logger.ts";
 
 
 type DragPayload =

@@ -567,7 +567,7 @@ export class SanityOrganizer extends LitElement {
   }
 
   private folderObjects(folder: FolderNode): HaItem[] {
-    return this.queryService.folderObjects(folder, this.catalog, this.search, this.settings);
+    return this.queryService.folderObjectsUnfiltered(folder, this.catalog, this.settings);
   }
 
   private onSortModeChange(event: Event): void {
@@ -800,9 +800,10 @@ export class SanityOrganizer extends LitElement {
             <span class="subtitle">Virtual folders for Home Assistant references</span>
           </div>
           <div class="toolbar-actions">
+            <span class="status-pill">${this.saving ? "Saving..." : "Saved"}</span>
             <button class="ha-btn" @click=${() => this.openNormalAddFolderDialog()}>New Folder</button>
             <button class="ha-btn" @click=${() => this.showSettings = !this.showSettings}>Settings</button>
-            <button class="ha-btn" @click=${() => void this.refreshCatalog()}>Refresh</button>
+            <button class="ha-btn" @click=${() => void this.refreshCatalog()}>Reload from HA</button>
           </div>
         </header>
 
@@ -857,7 +858,6 @@ export class SanityOrganizer extends LitElement {
             .value=${this.search}
             @input=${this.onSearchInput}
           />
-          <span class="status-pill">${this.saving ? "Saving..." : "Saved"}</span>
         </div>
 
         <section class="layout-grid">

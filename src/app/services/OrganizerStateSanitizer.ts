@@ -1,6 +1,3 @@
-/// <summary>
-/// Validates and normalizes stored data into a safe organizer state instance.
-/// </summary>
 import { FolderNode } from "../domain/FolderNode";
 import { FolderHaItemRef } from "../domain/FolderHaItemRef";
 import { HaItemType, type HaItemTypeValue } from "../domain/HaItemType";
@@ -8,6 +5,9 @@ import { OrganizerSettings } from "../domain/OrganizerSettings";
 import { OrganizerState } from "../domain/OrganizerState";
 import { OrganizerStateFactory } from "./OrganizerStateFactory";
 
+/**
+ * Validates and normalizes stored data into a safe organizer state instance.
+ */
 export class OrganizerStateSanitizer {
   private readonly factory: OrganizerStateFactory;
 
@@ -17,16 +17,20 @@ export class OrganizerStateSanitizer {
 
   public sanitize(value: unknown): OrganizerState {
     const defaults = this.factory.createInitial();
+
+    // If persisted payload is unusable, return a known-good baseline.
     if (!this.isObject(value)) {
       return defaults;
     }
 
+    // Normalize top-level collections. Invalid shapes become empty.
     const foldersValue = this.isObject(value.folders) ? value.folders : {};
     const rootFolderIds = this.isStringArray(value.rootFolderIds) ? value.rootFolderIds : [];
     const expandedFolderIds = this.isStringArray(value.expandedFolderIds)
       ? value.expandedFolderIds
       : [];
 
+    // Clamp settings to safe values so corrupted storage does not break runtime behavior.
     const rawSettings = this.isObject(value.settings) ? value.settings : {};
     const sortMode = rawSettings.sortMode === "name" ? "name" : defaults.settings.sortMode;
     const autoRefreshSecondsRaw =
@@ -39,6 +43,7 @@ export class OrganizerStateSanitizer {
         ? rawSettings.openTarget
         : defaults.settings.openTarget;
 
+    // Rebuild folders entry-by-entry and coerce each field into a valid shape.
     const folders: Record<string, FolderNode> = {};
     for (const [id, rawFolder] of Object.entries(foldersValue)) {
       if (!this.isObject(rawFolder)) {
@@ -54,6 +59,8 @@ export class OrganizerStateSanitizer {
       const parentId = typeof rawFolder.parentId === "string" ? rawFolder.parentId : null;
       const children = this.isStringArray(rawFolder.children) ? rawFolder.children : [];
       const rawObjects = Array.isArray(rawFolder.objects) ? rawFolder.objects : [];
+
+      // Keep only object refs with valid IDs and a recognized type.
       const objects = rawObjects
         .filter((obj) => this.isObject(obj))
         .map((obj) => {
@@ -75,6 +82,7 @@ export class OrganizerStateSanitizer {
     );
   }
 
+  // Unknown values default to Entity to preserve backward compatibility with older/bad payloads.
   private parseObjectType(value: unknown): HaItemTypeValue {
     switch (value) {
       case HaItemType.Device:

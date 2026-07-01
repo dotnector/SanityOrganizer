@@ -21,9 +21,9 @@ export class MockOrganizerRuntime implements OrganizerRuntime {
     this.stateSeeder = new MockStateSeeder();
   }
 
-  public async loadObjectCatalog(): Promise<HaItemCatalog> {
-    console.debug(`${MockOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:start`);
-    console.debug(`${MockOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:success`, {
+  public async loadHaItemCatalog(): Promise<HaItemCatalog> {
+    console.debug(`${MockOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:start`);
+    console.debug(`${MockOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:success`, {
       itemCount: this.catalog.all.length,
     });
     return this.catalog;

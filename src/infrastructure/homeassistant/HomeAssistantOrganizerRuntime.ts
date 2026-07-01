@@ -25,16 +25,16 @@ export class HomeAssistantOrganizerRuntime implements OrganizerRuntime {
     this.connection.updateHass(hass);
   }
 
-  public async loadObjectCatalog(): Promise<HaItemCatalog> {
-    console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:start`);
+  public async loadHaItemCatalog(): Promise<HaItemCatalog> {
+    console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:start`);
     try {
-      const catalog = await this.catalogService.loadObjectCatalog();
-      console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:success`, {
+      const catalog = await this.catalogService.loadHaItemCatalog();
+      console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:success`, {
         itemCount: catalog.all.length,
       });
       return catalog;
     } catch (error) {
-      console.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:error`, error);
+      console.error(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadHaItemCatalog:error`, error);
       throw error;
     }
   }

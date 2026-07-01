@@ -5,7 +5,7 @@ import { HaItemCatalog } from "../domain/HaItemCatalog";
 import { OrganizerState } from "../domain/OrganizerState";
 
 export interface OrganizerRuntime {
-  loadObjectCatalog(): Promise<HaItemCatalog>;
+  loadHaItemCatalog(): Promise<HaItemCatalog>;
   loadState(): Promise<OrganizerState>;
   saveState(state: OrganizerState): Promise<void>;
 }

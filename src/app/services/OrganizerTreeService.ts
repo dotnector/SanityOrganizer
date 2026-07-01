@@ -1,11 +1,11 @@
-/// <summary>
-/// Implements folder tree mutations such as create, move, rename, delete, and object assignment.
-/// </summary>
 import { FolderNode } from "../domain/FolderNode";
 import { FolderHaItemRef } from "../domain/FolderHaItemRef";
 import { HaItem } from "../domain/HaItem";
 import { OrganizerState } from "../domain/OrganizerState";
 
+/**
+ * Implements folder tree mutations such as create, move, rename, delete, and object assignment.
+ */
 export class OrganizerTreeService {
   private compareFolderNames(state: OrganizerState, leftId: string, rightId: string): number {
     const left = state.folders[leftId];

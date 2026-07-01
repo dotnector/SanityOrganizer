@@ -1,11 +1,14 @@
-/// <summary>
-/// Creates deep copies of organizer state for safe mutation workflows.
-/// </summary>
 import { FolderNode } from "../domain/FolderNode";
 import { FolderHaItemRef } from "../domain/FolderHaItemRef";
 import { OrganizerSettings } from "../domain/OrganizerSettings";
 import { OrganizerState } from "../domain/OrganizerState";
 
+/**
+ * Creates an isolated draft before mutations.
+ *
+ * Tree services mutate in place, so cloning prevents accidental edits to live UI state
+ * and gives each async save operation a stable snapshot.
+ */
 export class OrganizerStateCloner {
   public clone(state: OrganizerState): OrganizerState {
     const folders: Record<string, FolderNode> = {};

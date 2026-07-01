@@ -41,7 +41,7 @@ export class HaCatalogService {
     this.connection = connection;
   }
 
-  public async loadObjectCatalog(): Promise<HaItemCatalog> {
+  public async loadHaItemCatalog(): Promise<HaItemCatalog> {
     const [devices, entityRegistry] = await Promise.all([
       this.connection.callWS<HaDeviceRegistryEntry[]>({ type: "config/device_registry/list" }),
       this.connection.callWS<HaEntityRegistryEntry[]>({ type: "config/entity_registry/list" }),

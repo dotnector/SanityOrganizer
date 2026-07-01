@@ -1,9 +1,9 @@
-/// <summary>
-/// Represents persisted organizer data including folders, expansion state, and settings.
-/// </summary>
 import { FolderNode } from "./FolderNode";
 import { OrganizerSettings } from "./OrganizerSettings";
 
+/**
+ * Represents persisted organizer data including folders, expansion state, and settings.
+ */
 export class OrganizerState {
   public readonly version: 1;
   public folders: Record<string, FolderNode>;

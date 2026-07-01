@@ -166,7 +166,7 @@ export class SanityOrganizer extends LitElement {
     try {
       const [storedState, catalog] = await Promise.all([
         this.runtime.loadState(),
-        this.runtime.loadObjectCatalog(),
+        this.runtime.loadHaItemCatalog(),
       ]);
       this.organizerState = storedState;
       this.catalog = catalog;
@@ -190,7 +190,7 @@ export class SanityOrganizer extends LitElement {
       return;
     }
     try {
-      this.catalog = await this.runtime.loadObjectCatalog();
+      this.catalog = await this.runtime.loadHaItemCatalog();
     } catch {
       // Keep the latest good catalog when background refresh fails.
     }

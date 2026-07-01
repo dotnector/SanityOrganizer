@@ -20,10 +20,13 @@ export class HaItemQueryService {
    * Filters the catalog based on the search query and organizer settings.
    */
   public filterCatalog(catalog: HaItemCatalog, search: string, settings: OrganizerSettings): HaItem[] {
-    const query = search.trim().toLowerCase();
-    const items = query.length === 0
+    const fragments = this.normalizeSearch(search);
+    const items = fragments.length === 0
       ? catalog.all
-      : catalog.all.filter((object) => this.toHaystack(object).includes(query));
+      : catalog.all.filter((object) =>
+          this.matchesOrderedFragmentsInField(object.displayName, fragments) ||
+          this.matchesOrderedFragmentsInField(object.haId, fragments),
+        );
 
     return this.sort(items, settings);
   }
@@ -37,14 +40,17 @@ export class HaItemQueryService {
     search: string,
     settings: OrganizerSettings,
   ): HaItem[] {
-    const query = search.trim().toLowerCase();
+    const fragments = this.normalizeSearch(search);
     const merged = folder.objects
       .map((ref) => catalog.byId.get(ref.itemKey) ?? HaItem.createMissing(ref.haId, ref.itemKey, ref.type))
       .filter((record) => {
-        if (query.length === 0) {
+        if (fragments.length === 0) {
           return true;
         }
-        return this.toHaystack(record).includes(query);
+        return (
+          this.matchesOrderedFragmentsInField(record.displayName, fragments) ||
+          this.matchesOrderedFragmentsInField(record.haId, fragments)
+        );
       });
 
     return this.sort(merged, settings);
@@ -73,8 +79,28 @@ export class HaItemQueryService {
     return sorted;
   }
 
-  private toHaystack(record: HaItem): string {
-    return `${record.displayName} ${record.haId} ${record.type} ${record.domain ?? ""}`.toLowerCase();
+  private normalizeSearch(search: string): string[] {
+    return search
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((fragment) => fragment.length > 0);
+  }
+
+  private matchesOrderedFragments(haystack: string, fragments: string[]): boolean {
+    let searchIndex = 0;
+    for (const fragment of fragments) {
+      const foundIndex = haystack.indexOf(fragment, searchIndex);
+      if (foundIndex < 0) {
+        return false;
+      }
+      searchIndex = foundIndex + fragment.length;
+    }
+    return true;
+  }
+
+  private matchesOrderedFragmentsInField(value: string, fragments: string[]): boolean {
+    return this.matchesOrderedFragments(value.toLowerCase(), fragments);
   }
 
   private sort(items: HaItem[], settings: OrganizerSettings): HaItem[] {

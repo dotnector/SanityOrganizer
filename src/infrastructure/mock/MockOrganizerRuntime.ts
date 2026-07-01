@@ -2,7 +2,7 @@
 /// Implements organizer runtime behavior using mock catalog and local browser storage.
 /// </summary>
 import type { OrganizerRuntime } from "../../app/contracts/OrganizerRuntime";
-import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
+import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
 import { OrganizerState } from "../../app/domain/OrganizerState";
 import { BrowserStorageStateStore } from "./BrowserStorageStateStore";
 import { MockCatalogFactory } from "./MockCatalogFactory";
@@ -11,7 +11,7 @@ import { MockStateSeeder } from "./MockStateSeeder";
 
 export class MockOrganizerRuntime implements OrganizerRuntime {
   private static readonly LOG_PREFIX = "[SanityOrganizer][MockRuntime]";
-  private readonly catalog: ObjectCatalog;
+  private readonly catalog: HaItemCatalog;
   private readonly stateStore: BrowserStorageStateStore;
   private readonly stateSeeder: MockStateSeeder;
 
@@ -21,7 +21,7 @@ export class MockOrganizerRuntime implements OrganizerRuntime {
     this.stateSeeder = new MockStateSeeder();
   }
 
-  public async loadObjectCatalog(): Promise<ObjectCatalog> {
+  public async loadObjectCatalog(): Promise<HaItemCatalog> {
     console.debug(`${MockOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:start`);
     console.debug(`${MockOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:success`, {
       itemCount: this.catalog.all.length,

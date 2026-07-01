@@ -2,7 +2,7 @@
 /// Creates deep copies of organizer state for safe mutation workflows.
 /// </summary>
 import { FolderNode } from "../domain/FolderNode";
-import { FolderObjectRef } from "../domain/FolderObjectRef";
+import { FolderHaItemRef } from "../domain/FolderHaItemRef";
 import { OrganizerSettings } from "../domain/OrganizerSettings";
 import { OrganizerState } from "../domain/OrganizerState";
 
@@ -16,7 +16,7 @@ export class OrganizerStateCloner {
         folder.icon,
         folder.parentId,
         [...folder.children],
-        folder.objects.map((obj) => new FolderObjectRef(obj.objectId, obj.type, obj.refId)),
+        folder.objects.map((obj) => new FolderHaItemRef(obj.objectId, obj.type, obj.refId)),
       );
     }
 

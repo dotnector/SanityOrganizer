@@ -1,31 +1,31 @@
 /// <summary>
 /// Generates mock object catalogs for small, medium, and large development datasets.
 /// </summary>
-import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
-import { ObjectRecord } from "../../app/domain/ObjectRecord";
-import { ObjectType } from "../../app/domain/ObjectType";
+import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
+import { HaItem } from "../../app/domain/HaItem";
+import { HaItemType } from "../../app/domain/HaItemType";
 import type { MockDatasetSize } from "./MockDatasetSize";
 
 export class MockCatalogFactory {
   private static readonly ICONS = {
-    [ObjectType.Device]: "mdi:devices",
-    [ObjectType.Entity]: "mdi:shape-outline",
-    [ObjectType.Helper]: "mdi:tune-variant",
-    [ObjectType.Automation]: "mdi:robot",
-    [ObjectType.Script]: "mdi:script-text-outline",
-    [ObjectType.Scene]: "mdi:palette-outline",
+    [HaItemType.Device]: "mdi:devices",
+    [HaItemType.Entity]: "mdi:shape-outline",
+    [HaItemType.Helper]: "mdi:tune-variant",
+    [HaItemType.Automation]: "mdi:robot",
+    [HaItemType.Script]: "mdi:script-text-outline",
+    [HaItemType.Scene]: "mdi:palette-outline",
   };
 
-  public create(size: MockDatasetSize): ObjectCatalog {
+  public create(size: MockDatasetSize): HaItemCatalog {
     const counts = this.getCounts(size);
-    const byId = new Map<string, ObjectRecord>();
+    const byId = new Map<string, HaItem>();
 
     this.addDevices(byId, counts.devices);
     this.addEntities(byId, counts.entities);
     this.addHelpers(byId, counts.helpers);
-    this.addDomainObjects(byId, ObjectType.Automation, "automation", counts.automations);
-    this.addDomainObjects(byId, ObjectType.Script, "script", counts.scripts);
-    this.addDomainObjects(byId, ObjectType.Scene, "scene", counts.scenes);
+    this.addDomainObjects(byId, HaItemType.Automation, "automation", counts.automations);
+    this.addDomainObjects(byId, HaItemType.Script, "script", counts.scripts);
+    this.addDomainObjects(byId, HaItemType.Scene, "scene", counts.scenes);
 
     const all = [...byId.values()].sort((a, b) => {
       if (a.type === b.type) {
@@ -34,10 +34,10 @@ export class MockCatalogFactory {
       return a.type.localeCompare(b.type);
     });
 
-    return new ObjectCatalog(byId, all);
+    return new HaItemCatalog(byId, all);
   }
 
-  private addDevices(byId: Map<string, ObjectRecord>, count: number): void {
+  private addDevices(byId: Map<string, HaItem>, count: number): void {
     const manufacturers = ["Philips", "Aqara", "IKEA", "Shelly", "Samsung"];
     const models = ["Hub", "Sensor", "Switch", "Plug", "Light"];
     for (let index = 1; index <= count; index += 1) {
@@ -46,12 +46,12 @@ export class MockCatalogFactory {
       const secondary = `${manufacturers[index % manufacturers.length]} - ${models[index % models.length]}`;
       byId.set(
         `device:${id}`,
-        new ObjectRecord(
+        new HaItem(
           `device:${id}`,
-          ObjectType.Device,
+          HaItemType.Device,
           id,
           displayName,
-          MockCatalogFactory.ICONS[ObjectType.Device],
+          MockCatalogFactory.ICONS[HaItemType.Device],
           undefined,
           secondary,
         ),
@@ -59,7 +59,7 @@ export class MockCatalogFactory {
     }
   }
 
-  private addEntities(byId: Map<string, ObjectRecord>, count: number): void {
+  private addEntities(byId: Map<string, HaItem>, count: number): void {
     const domains = ["light", "sensor", "binary_sensor", "switch", "climate", "cover"];
     const rooms = ["kitchen", "living_room", "hallway", "bedroom", "garage", "office"];
     const names = ["Lamp", "Temperature", "Motion", "Fan", "Door", "Outlet"];
@@ -70,19 +70,19 @@ export class MockCatalogFactory {
       const displayName = `${rooms[index % rooms.length].replace("_", " ")} ${names[index % names.length]}`;
       byId.set(
         `entity:${entityId}`,
-        new ObjectRecord(
+        new HaItem(
           `entity:${entityId}`,
-          ObjectType.Entity,
+          HaItemType.Entity,
           entityId,
           displayName,
-          MockCatalogFactory.ICONS[ObjectType.Entity],
+          MockCatalogFactory.ICONS[HaItemType.Entity],
           domain,
         ),
       );
     }
   }
 
-  private addHelpers(byId: Map<string, ObjectRecord>, count: number): void {
+  private addHelpers(byId: Map<string, HaItem>, count: number): void {
     const domains = ["input_boolean", "input_select", "input_number", "input_text", "timer"];
     const names = ["Vacation Mode", "Heating Preset", "Brightness Offset", "Note", "Cleanup Timer"];
     for (let index = 1; index <= count; index += 1) {
@@ -91,12 +91,12 @@ export class MockCatalogFactory {
       const displayName = names[index % names.length];
       byId.set(
         `helper:${entityId}`,
-        new ObjectRecord(
+        new HaItem(
           `helper:${entityId}`,
-          ObjectType.Helper,
+          HaItemType.Helper,
           entityId,
           displayName,
-          MockCatalogFactory.ICONS[ObjectType.Helper],
+          MockCatalogFactory.ICONS[HaItemType.Helper],
           domain,
         ),
       );
@@ -104,19 +104,19 @@ export class MockCatalogFactory {
   }
 
   private addDomainObjects(
-    byId: Map<string, ObjectRecord>,
-    type: typeof ObjectType.Automation | typeof ObjectType.Script | typeof ObjectType.Scene,
+    byId: Map<string, HaItem>,
+    type: typeof HaItemType.Automation | typeof HaItemType.Script | typeof HaItemType.Scene,
     domain: string,
     count: number,
   ): void {
     const names = ["Morning Routine", "Arrival", "Night Shutdown", "Energy Saver", "Garden Watering"];
-    const prefix = type === ObjectType.Automation ? "automation" : type === ObjectType.Script ? "script" : "scene";
+    const prefix = type === HaItemType.Automation ? "automation" : type === HaItemType.Script ? "script" : "scene";
     for (let index = 1; index <= count; index += 1) {
       const entityId = `${domain}.${prefix}_${index.toString().padStart(4, "0")}`;
       const displayName = `${names[index % names.length]} ${((index - 1) % 9) + 1}`;
       byId.set(
         `${type}:${entityId}`,
-        new ObjectRecord(
+        new HaItem(
           `${type}:${entityId}`,
           type,
           entityId,

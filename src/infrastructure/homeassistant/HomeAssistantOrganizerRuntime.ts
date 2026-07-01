@@ -2,7 +2,7 @@
 /// Implements organizer runtime operations backed by Home Assistant services.
 /// </summary>
 import type { OrganizerRuntime } from "../../app/contracts/OrganizerRuntime";
-import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
+import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
 import { OrganizerState } from "../../app/domain/OrganizerState";
 import { OrganizerStorageService } from "../../app/services/OrganizerStorageService";
 import { HaCatalogService } from "../../ha/services/HaCatalogService";
@@ -25,7 +25,7 @@ export class HomeAssistantOrganizerRuntime implements OrganizerRuntime {
     this.connection.updateHass(hass);
   }
 
-  public async loadObjectCatalog(): Promise<ObjectCatalog> {
+  public async loadObjectCatalog(): Promise<HaItemCatalog> {
     console.debug(`${HomeAssistantOrganizerRuntime.LOG_PREFIX} loadObjectCatalog:start`);
     try {
       const catalog = await this.catalogService.loadObjectCatalog();

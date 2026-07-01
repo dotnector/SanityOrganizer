@@ -2,8 +2,8 @@
 /// Implements folder tree mutations such as create, move, rename, delete, and object assignment.
 /// </summary>
 import { FolderNode } from "../domain/FolderNode";
-import { FolderObjectRef } from "../domain/FolderObjectRef";
-import { ObjectRecord } from "../domain/ObjectRecord";
+import { FolderHaItemRef } from "../domain/FolderHaItemRef";
+import { HaItem } from "../domain/HaItem";
 import { OrganizerState } from "../domain/OrganizerState";
 
 export class OrganizerTreeService {
@@ -115,7 +115,7 @@ export class OrganizerTreeService {
     }
   }
 
-  public addObjectToFolder(state: OrganizerState, folderId: string, object: ObjectRecord): void {
+  public addObjectToFolder(state: OrganizerState, folderId: string, object: HaItem): void {
     const folder = state.folders[folderId];
     if (!folder) {
       return;
@@ -123,10 +123,10 @@ export class OrganizerTreeService {
     if (folder.objects.some((entry) => entry.objectId === object.objectId)) {
       return;
     }
-    folder.objects.push(new FolderObjectRef(object.objectId, object.type, object.refId));
+    folder.objects.push(new FolderHaItemRef(object.objectId, object.type, object.refId));
   }
 
-  public addObjectsToFolder(state: OrganizerState, folderId: string, objects: ObjectRecord[]): void {
+  public addObjectsToFolder(state: OrganizerState, folderId: string, objects: HaItem[]): void {
     const folder = state.folders[folderId];
     if (!folder) {
       return;
@@ -135,7 +135,7 @@ export class OrganizerTreeService {
       if (folder.objects.some((entry) => entry.objectId === object.objectId)) {
         continue;
       }
-      folder.objects.push(new FolderObjectRef(object.objectId, object.type, object.refId));
+      folder.objects.push(new FolderHaItemRef(object.objectId, object.type, object.refId));
     }
   }
 

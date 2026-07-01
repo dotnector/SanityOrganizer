@@ -1,7 +1,7 @@
 /// <summary>
 /// Represents a folder node with hierarchy links and contained object references.
 /// </summary>
-import { FolderObjectRef } from "./FolderObjectRef";
+import { FolderHaItemRef } from "./FolderHaItemRef";
 
 /**
  * Represents a folder node in a hierarchical structure, containing references to child folders and associated objects.
@@ -18,7 +18,7 @@ export class FolderNode {
   public icon: string;
   public parentId: string | null;
   public children: string[];
-  public objects: FolderObjectRef[];
+  public objects: FolderHaItemRef[];
 
   public constructor(
     id: string,
@@ -26,7 +26,7 @@ export class FolderNode {
     icon: string,
     parentId: string | null,
     children: string[] = [],
-    objects: FolderObjectRef[] = [],
+    objects: FolderHaItemRef[] = [],
   ) {
     this.id = id;
     this.name = name;

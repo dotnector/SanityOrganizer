@@ -2,8 +2,8 @@
 /// Validates and normalizes stored data into a safe organizer state instance.
 /// </summary>
 import { FolderNode } from "../domain/FolderNode";
-import { FolderObjectRef } from "../domain/FolderObjectRef";
-import { ObjectType, type ObjectTypeValue } from "../domain/ObjectType";
+import { FolderHaItemRef } from "../domain/FolderHaItemRef";
+import { HaItemType, type HaItemTypeValue } from "../domain/HaItemType";
 import { OrganizerSettings } from "../domain/OrganizerSettings";
 import { OrganizerState } from "../domain/OrganizerState";
 import { OrganizerStateFactory } from "./OrganizerStateFactory";
@@ -60,7 +60,7 @@ export class OrganizerStateSanitizer {
           const objectId = typeof obj.objectId === "string" ? obj.objectId : "";
           const refId = typeof obj.refId === "string" ? obj.refId : "";
           const type = this.parseObjectType(obj.type);
-          return new FolderObjectRef(objectId, type, refId);
+          return new FolderHaItemRef(objectId, type, refId);
         })
         .filter((obj) => obj.objectId.length > 0 && obj.refId.length > 0);
 
@@ -75,17 +75,17 @@ export class OrganizerStateSanitizer {
     );
   }
 
-  private parseObjectType(value: unknown): ObjectTypeValue {
+  private parseObjectType(value: unknown): HaItemTypeValue {
     switch (value) {
-      case ObjectType.Device:
-      case ObjectType.Entity:
-      case ObjectType.Helper:
-      case ObjectType.Automation:
-      case ObjectType.Script:
-      case ObjectType.Scene:
+      case HaItemType.Device:
+      case HaItemType.Entity:
+      case HaItemType.Helper:
+      case HaItemType.Automation:
+      case HaItemType.Script:
+      case HaItemType.Scene:
         return value;
       default:
-        return ObjectType.Entity;
+        return HaItemType.Entity;
     }
   }
 

@@ -5,12 +5,12 @@ import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { OrganizerRuntime } from "./app/contracts/OrganizerRuntime";
 import { FolderNode } from "./app/domain/FolderNode";
-import { ObjectCatalog } from "./app/domain/ObjectCatalog";
-import { ObjectRecord } from "./app/domain/ObjectRecord";
+import { HaItemCatalog } from "./app/domain/HaItemCatalog";
+import { HaItem } from "./app/domain/HaItem";
 import { OrganizerSettings } from "./app/domain/OrganizerSettings";
 import { OrganizerState } from "./app/domain/OrganizerState";
-import { ObjectQueryService } from "./app/services/ObjectQueryService";
-import { ObjectSelectionService } from "./app/services/ObjectSelectionService";
+import { HaItemQueryService } from "./app/services/HaItemQueryService";
+import { HaItemSelectionService } from "./app/services/HaItemSelectionService";
 import { OrganizerStateCloner } from "./app/services/OrganizerStateCloner";
 import { OrganizerStateFactory } from "./app/services/OrganizerStateFactory";
 import { OrganizerTreeService } from "./app/services/OrganizerTreeService";
@@ -73,7 +73,7 @@ export class SanityOrganizer extends LitElement {
   @property({ attribute: false }) public runtime?: OrganizerRuntime;
 
   @state() private organizerState: OrganizerState = new OrganizerStateFactory().createInitial();
-  @state() private catalog: ObjectCatalog = new ObjectCatalog(new Map(), []);
+  @state() private catalog: HaItemCatalog = new HaItemCatalog(new Map(), []);
   @state() private loading = true;
   @state() private saving = false;
   @state() private errorText = "";
@@ -93,8 +93,8 @@ export class SanityOrganizer extends LitElement {
   private refreshTimerId: number | null = null;
   private readonly stateCloner = new OrganizerStateCloner();
   private readonly treeService = new OrganizerTreeService();
-  private readonly queryService = new ObjectQueryService();
-  private readonly selectionService = new ObjectSelectionService();
+  private readonly queryService = new HaItemQueryService();
+  private readonly selectionService = new HaItemSelectionService();
   private readonly runtimeResolver = new RuntimeResolver();
 
   public connectedCallback(): void {
@@ -352,7 +352,7 @@ export class SanityOrganizer extends LitElement {
     }
   }
 
-  private addObjectToFolder(folderId: string, object: ObjectRecord): void {
+  private addObjectToFolder(folderId: string, object: HaItem): void {
     this.mutateState((draft) => {
       this.treeService.addObjectToFolder(draft, folderId, object);
     });
@@ -371,7 +371,7 @@ export class SanityOrganizer extends LitElement {
     const selectedFolderId = this.selectedFolderId;
     const objects = [...this.selectedObjectIds]
       .map((id) => this.catalog.byId.get(id))
-      .filter((obj): obj is ObjectRecord => Boolean(obj));
+      .filter((obj): obj is HaItem => Boolean(obj));
 
     this.mutateState((draft) => {
       this.treeService.addObjectsToFolder(draft, selectedFolderId, objects);
@@ -560,11 +560,11 @@ export class SanityOrganizer extends LitElement {
     }
   }
 
-  private filteredObjects(): ObjectRecord[] {
+  private filteredObjects(): HaItem[] {
     return this.queryService.filterCatalog(this.catalog, this.search, this.settings);
   }
 
-  private folderObjects(folder: FolderNode): ObjectRecord[] {
+  private folderObjects(folder: FolderNode): HaItem[] {
     return this.queryService.folderObjects(folder, this.catalog, this.search, this.settings);
   }
 

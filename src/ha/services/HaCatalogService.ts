@@ -1,9 +1,9 @@
 /// <summary>
 /// Builds the object catalog from Home Assistant registries and current runtime states.
 /// </summary>
-import { ObjectCatalog } from "../../app/domain/ObjectCatalog";
-import { ObjectRecord } from "../../app/domain/ObjectRecord";
-import { ObjectType, type ObjectTypeValue } from "../../app/domain/ObjectType";
+import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
+import { HaItem } from "../../app/domain/HaItem";
+import { HaItemType, type HaItemTypeValue } from "../../app/domain/HaItemType";
 import type {
   HaConnection,
   HaDeviceRegistryEntry,
@@ -26,13 +26,13 @@ export class HaCatalogService {
 
   private static readonly EXCLUDED_ENTITY_DOMAINS = new Set(["automation", "script", "scene"]);
 
-  private static readonly ICONS: Record<ObjectTypeValue, string> = {
-    [ObjectType.Device]: "mdi:devices",
-    [ObjectType.Entity]: "mdi:shape-outline",
-    [ObjectType.Helper]: "mdi:tune-variant",
-    [ObjectType.Automation]: "mdi:robot",
-    [ObjectType.Script]: "mdi:script-text-outline",
-    [ObjectType.Scene]: "mdi:palette-outline",
+  private static readonly ICONS: Record<HaItemTypeValue, string> = {
+    [HaItemType.Device]: "mdi:devices",
+    [HaItemType.Entity]: "mdi:shape-outline",
+    [HaItemType.Helper]: "mdi:tune-variant",
+    [HaItemType.Automation]: "mdi:robot",
+    [HaItemType.Script]: "mdi:script-text-outline",
+    [HaItemType.Scene]: "mdi:palette-outline",
   };
 
   private readonly connection: HaConnection;
@@ -41,24 +41,24 @@ export class HaCatalogService {
     this.connection = connection;
   }
 
-  public async loadObjectCatalog(): Promise<ObjectCatalog> {
+  public async loadObjectCatalog(): Promise<HaItemCatalog> {
     const [devices, entityRegistry] = await Promise.all([
       this.connection.callWS<HaDeviceRegistryEntry[]>({ type: "config/device_registry/list" }),
       this.connection.callWS<HaEntityRegistryEntry[]>({ type: "config/entity_registry/list" }),
     ]);
 
-    const byId = new Map<string, ObjectRecord>();
+    const byId = new Map<string, HaItem>();
 
     for (const device of devices) {
       const displayName = device.name_by_user || device.name || `Device ${device.id}`;
       byId.set(
         `device:${device.id}`,
-        new ObjectRecord(
+        new HaItem(
           `device:${device.id}`,
-          ObjectType.Device,
+          HaItemType.Device,
           device.id,
           displayName,
-          HaCatalogService.ICONS[ObjectType.Device],
+          HaCatalogService.ICONS[HaItemType.Device],
           undefined,
           [device.manufacturer, device.model].filter(Boolean).join(" - ") || undefined,
         ),
@@ -77,12 +77,12 @@ export class HaCatalogService {
       if (HaCatalogService.HELPER_DOMAINS.has(domain)) {
         byId.set(
           `helper:${entry.entity_id}`,
-          new ObjectRecord(
+          new HaItem(
             `helper:${entry.entity_id}`,
-            ObjectType.Helper,
+            HaItemType.Helper,
             entry.entity_id,
             displayName,
-            HaCatalogService.ICONS[ObjectType.Helper],
+            HaCatalogService.ICONS[HaItemType.Helper],
             domain,
           ),
         );
@@ -92,12 +92,12 @@ export class HaCatalogService {
       if (!HaCatalogService.EXCLUDED_ENTITY_DOMAINS.has(domain)) {
         byId.set(
           `entity:${entry.entity_id}`,
-          new ObjectRecord(
+          new HaItem(
             `entity:${entry.entity_id}`,
-            ObjectType.Entity,
+            HaItemType.Entity,
             entry.entity_id,
             displayName,
-            HaCatalogService.ICONS[ObjectType.Entity],
+            HaCatalogService.ICONS[HaItemType.Entity],
             domain,
           ),
         );
@@ -110,36 +110,36 @@ export class HaCatalogService {
       if (domain === "automation") {
         byId.set(
           `automation:${entityId}`,
-          new ObjectRecord(
+          new HaItem(
             `automation:${entityId}`,
-            ObjectType.Automation,
+            HaItemType.Automation,
             entityId,
             displayName,
-            HaCatalogService.ICONS[ObjectType.Automation],
+            HaCatalogService.ICONS[HaItemType.Automation],
             domain,
           ),
         );
       } else if (domain === "script") {
         byId.set(
           `script:${entityId}`,
-          new ObjectRecord(
+          new HaItem(
             `script:${entityId}`,
-            ObjectType.Script,
+            HaItemType.Script,
             entityId,
             displayName,
-            HaCatalogService.ICONS[ObjectType.Script],
+            HaCatalogService.ICONS[HaItemType.Script],
             domain,
           ),
         );
       } else if (domain === "scene") {
         byId.set(
           `scene:${entityId}`,
-          new ObjectRecord(
+          new HaItem(
             `scene:${entityId}`,
-            ObjectType.Scene,
+            HaItemType.Scene,
             entityId,
             displayName,
-            HaCatalogService.ICONS[ObjectType.Scene],
+            HaCatalogService.ICONS[HaItemType.Scene],
             domain,
           ),
         );
@@ -153,7 +153,7 @@ export class HaCatalogService {
       return a.type.localeCompare(b.type);
     });
 
-    return new ObjectCatalog(byId, all);
+    return new HaItemCatalog(byId, all);
   }
 
   private displayEntityName(entityId: string, attrs: Record<string, unknown>): string {

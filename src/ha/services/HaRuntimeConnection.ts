@@ -1,8 +1,8 @@
-/// <summary>
-/// Wraps and forwards Home Assistant connection calls while allowing runtime replacement.
-/// </summary>
 import type { HaConnection, HaStateEntry } from "../domain/HaConnection";
 
+/**
+Wraps and forwards Home Assistant connection calls while allowing runtime replacement.
+ */
 export class HaRuntimeConnection implements HaConnection {
   private runtime: HaConnection;
 

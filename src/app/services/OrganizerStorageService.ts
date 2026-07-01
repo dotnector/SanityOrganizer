@@ -1,10 +1,10 @@
-/// <summary>
-/// Loads and saves organizer state through Home Assistant frontend user-data APIs.
-/// </summary>
 import { OrganizerState } from "../domain/OrganizerState";
 import { OrganizerStateSanitizer } from "./OrganizerStateSanitizer";
 import type { HaConnection } from "../../ha/domain/HaConnection";
 
+/**
+Loads and saves organizer state through Home Assistant frontend user-data APIs.
+ */
 export class OrganizerStorageService {
   private static readonly STORAGE_KEY = "sanity_organizer";
   private static readonly LOG_PREFIX = "[SanityOrganizer][OrganizerStorageService]";

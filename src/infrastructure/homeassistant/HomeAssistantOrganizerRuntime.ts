@@ -1,6 +1,3 @@
-/// <summary>
-/// Implements organizer runtime operations backed by Home Assistant services.
-/// </summary>
 import type { OrganizerRuntime } from "../../app/contracts/OrganizerRuntime";
 import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
 import { OrganizerState } from "../../app/domain/OrganizerState";
@@ -9,6 +6,9 @@ import { HaCatalogService } from "../../ha/services/HaCatalogService";
 import { HaRuntimeConnection } from "../../ha/services/HaRuntimeConnection";
 import type { HaConnection } from "../../ha/domain/HaConnection";
 
+/**
+Implements organizer runtime operations backed by Home Assistant services.
+ */
 export class HomeAssistantOrganizerRuntime implements OrganizerRuntime {
   private static readonly LOG_PREFIX = "[SanityOrganizer][HomeAssistantRuntime]";
   private readonly storageService: OrganizerStorageService;

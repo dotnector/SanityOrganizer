@@ -1,6 +1,3 @@
-/// <summary>
-/// Seeds initial mock folders and object assignments for local development scenarios.
-/// </summary>
 import { FolderNode } from "../../app/domain/FolderNode";
 import { FolderHaItemRef } from "../../app/domain/FolderHaItemRef";
 import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
@@ -8,6 +5,9 @@ import { HaItemType } from "../../app/domain/HaItemType";
 import { OrganizerSettings } from "../../app/domain/OrganizerSettings";
 import { OrganizerState } from "../../app/domain/OrganizerState";
 
+/**
+Seeds initial mock folders and object assignments for local development scenarios.
+ */
 export class MockStateSeeder {
   public createInitialState(catalog: HaItemCatalog): OrganizerState {
     const folders: Record<string, FolderNode> = {};

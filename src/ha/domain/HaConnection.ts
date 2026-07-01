@@ -1,6 +1,6 @@
-/// <summary>
-/// Declares Home Assistant connection and registry interfaces used by integration services.
-/// </summary>
+/**
+Declares Home Assistant connection and registry interfaces used by integration services.
+ */
 export interface HaStateEntry {
   entity_id: string;
   attributes: Record<string, unknown>;

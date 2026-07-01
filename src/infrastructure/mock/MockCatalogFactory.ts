@@ -1,11 +1,11 @@
-/// <summary>
-/// Generates mock object catalogs for small, medium, and large development datasets.
-/// </summary>
 import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
 import { HaItem } from "../../app/domain/HaItem";
 import { HaItemType } from "../../app/domain/HaItemType";
 import type { MockDatasetSize } from "./MockDatasetSize";
 
+/**
+Generates mock object catalogs for small, medium, and large development datasets.
+ */
 export class MockCatalogFactory {
   private static readonly ICONS = {
     [HaItemType.Device]: "mdi:devices",

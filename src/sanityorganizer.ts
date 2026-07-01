@@ -1,6 +1,3 @@
-/// <summary>
-/// Defines the main organizer web component including UI, interactions, and state orchestration.
-/// </summary>
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { OrganizerRuntime } from "./app/contracts/OrganizerRuntime";
@@ -17,6 +14,7 @@ import { OrganizerTreeService } from "./app/services/OrganizerTreeService";
 import type { HaConnection } from "./ha/domain/HaConnection";
 import { RuntimeResolver } from "./infrastructure/RuntimeResolver";
 import { HomeAssistantOrganizerRuntime } from "./infrastructure/homeassistant/HomeAssistantOrganizerRuntime";
+
 
 type DragPayload =
   | { kind: "folder"; folderId: string }
@@ -67,6 +65,10 @@ function uid(prefix: string): string {
 }
 
 @customElement("sanity-organizer")
+
+/**
+Defines the main organizer web component including UI, interactions, and state orchestration.
+ */
 export class SanityOrganizer extends LitElement {
   private static readonly LOG_PREFIX = "[SanityOrganizer][UI]";
   @property({ attribute: false }) public hass?: HaConnection;

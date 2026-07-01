@@ -1,6 +1,6 @@
-/// <summary>
-/// Bootstraps the application entrypoint and injects browser runtime into the component.
-/// </summary>
+/**
+Bootstraps the application entrypoint and injects browser runtime into the component.
+ */
 import "./index.css";
 import "./sanityorganizer.ts";
 import { RuntimeResolver } from "./infrastructure/RuntimeResolver";

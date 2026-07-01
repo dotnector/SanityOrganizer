@@ -1,6 +1,3 @@
-/// <summary>
-/// Implements organizer runtime behavior using mock catalog and local browser storage.
-/// </summary>
 import type { OrganizerRuntime } from "../../app/contracts/OrganizerRuntime";
 import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
 import { OrganizerState } from "../../app/domain/OrganizerState";
@@ -9,6 +6,9 @@ import { MockCatalogFactory } from "./MockCatalogFactory";
 import type { MockDatasetSize } from "./MockDatasetSize";
 import { MockStateSeeder } from "./MockStateSeeder";
 
+/**
+Implements organizer runtime behavior using mock catalog and local browser storage.
+ */
 export class MockOrganizerRuntime implements OrganizerRuntime {
   private static readonly LOG_PREFIX = "[SanityOrganizer][MockRuntime]";
   private readonly catalog: HaItemCatalog;

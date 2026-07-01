@@ -1,9 +1,9 @@
-/// <summary>
-/// Persists and restores mock organizer state in browser localStorage with sanitization.
-/// </summary>
 import { OrganizerState } from "../../app/domain/OrganizerState";
 import { OrganizerStateSanitizer } from "../../app/services/OrganizerStateSanitizer";
 
+/**
+Persists and restores mock organizer state in browser localStorage with sanitization.
+ */
 export class BrowserStorageStateStore {
   private static readonly LOG_PREFIX = "[SanityOrganizer][BrowserStorageStateStore]";
   private readonly storageKey: string;

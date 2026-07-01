@@ -1,4 +1,4 @@
-/// <summary>
-/// Defines available mock dataset size options used to seed development data.
-/// </summary>
+/**
+Defines available mock dataset size options used to seed development data.
+ */
 export type MockDatasetSize = "small" | "medium" | "large";

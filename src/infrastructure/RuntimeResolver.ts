@@ -1,12 +1,12 @@
-/// <summary>
-/// Chooses the runtime implementation for Home Assistant shell mode or browser mock mode.
-/// </summary>
 import type { OrganizerRuntime } from "../app/contracts/OrganizerRuntime";
 import type { HaConnection } from "../ha/domain/HaConnection";
 import { HomeAssistantOrganizerRuntime } from "./homeassistant/HomeAssistantOrganizerRuntime";
 import type { MockDatasetSize } from "./mock/MockDatasetSize";
 import { MockOrganizerRuntime } from "./mock/MockOrganizerRuntime";
 
+/**
+Chooses the runtime implementation for Home Assistant shell mode or browser mock mode.
+ */
 export class RuntimeResolver {
   public resolveFromHass(hass: HaConnection): OrganizerRuntime {
     return new HomeAssistantOrganizerRuntime(hass);

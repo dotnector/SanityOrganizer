@@ -1,15 +1,16 @@
-/// <summary>
-/// Builds the object catalog from Home Assistant registries and current runtime states.
-/// </summary>
 import { HaItemCatalog } from "../../app/domain/HaItemCatalog";
 import { HaItem } from "../../app/domain/HaItem";
 import { HaItemType, type HaItemTypeValue } from "../../app/domain/HaItemType";
 import type {
+
   HaConnection,
   HaDeviceRegistryEntry,
   HaEntityRegistryEntry,
 } from "../domain/HaConnection";
 
+/**
+Builds the object catalog from Home Assistant registries and current runtime states.
+ */
 export class HaCatalogService {
   private static readonly HELPER_DOMAINS = new Set([
     "input_boolean",

@@ -1,7 +1,5 @@
-/// <summary>
-/// Represents a folder node with hierarchy links and contained object references.
-/// </summary>
 import { FolderHaItemRef } from "./FolderHaItemRef";
+
 
 /**
  * Represents a folder node in a hierarchical structure, containing references to child folders and associated objects.
@@ -11,6 +9,10 @@ import { FolderHaItemRef } from "./FolderHaItemRef";
  * @param parentId - Reference to parent folder, if any. Root folders will have a null parentId.
  * @param children - An array of unique identifiers for child folder nodes.
  * @param objects - An array of references to Home Assistant entities contained within the folder node.
+ */
+
+/**
+Represents a folder node with hierarchy links and contained object references.
  */
 export class FolderNode {
   public readonly id: string;

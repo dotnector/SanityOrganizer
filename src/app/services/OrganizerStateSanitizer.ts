@@ -64,18 +64,8 @@ export class OrganizerStateSanitizer {
       const objects = rawObjects
         .filter((obj) => this.isObject(obj))
         .map((obj) => {
-          const itemKey =
-            typeof obj.itemKey === "string"
-              ? obj.itemKey
-              : typeof obj.objectId === "string"
-                ? obj.objectId
-                : "";
-          const haId =
-            typeof obj.haId === "string"
-              ? obj.haId
-              : typeof obj.refId === "string"
-                ? obj.refId
-                : "";
+          const itemKey = typeof obj.itemKey === "string" ? obj.itemKey : "";
+          const haId = typeof obj.haId === "string" ? obj.haId : "";
           const type = this.parseObjectType(obj.type);
           return new FolderHaItemRef(itemKey, type, haId);
         })

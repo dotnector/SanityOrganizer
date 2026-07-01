@@ -388,6 +388,31 @@ export class SanityOrganizer extends LitElement {
     });
   }
 
+  private editorPathFor(item: HaItem): string {
+    if (item.type === "device") {
+      return `/config/devices/device/${encodeURIComponent(item.haId)}`;
+    }
+    return `/config/entities/entity/${encodeURIComponent(item.haId)}`;
+  }
+
+  private editorTarget(): string {
+    if (this.settings.openTarget === "this-tab") {
+      return "_self";
+    }
+    if (this.settings.openTarget === "same-other-tab") {
+      return "sanity_organizer";
+    }
+    return "_blank";
+  }
+
+  private editorRel(): string {
+    return this.settings.openTarget === "new-tab" ? "noopener noreferrer" : "";
+  }
+
+  private onFolderItemNameClick(event: Event): void {
+    event.stopPropagation();
+  }
+
   private getFilteredObjectIds(): string[] {
     return this.filteredObjects().map((entry) => entry.itemKey);
   }
@@ -800,7 +825,6 @@ export class SanityOrganizer extends LitElement {
             <span class="subtitle">Virtual folders for Home Assistant references</span>
           </div>
           <div class="toolbar-actions">
-            <span class="status-pill">${this.saving ? "Saving..." : "Saved"}</span>
             <button class="ha-btn" @click=${() => this.openNormalAddFolderDialog()}>New Folder</button>
             <button class="ha-btn" @click=${() => this.showSettings = !this.showSettings}>Settings</button>
             <button class="ha-btn" @click=${() => void this.refreshCatalog()}>Reload from HA</button>
@@ -971,7 +995,17 @@ export class SanityOrganizer extends LitElement {
                           >
                             ${this.renderIcon(object.icon)}
                             <div>
-                              <div>${object.displayName}</div>
+                              <div>
+                                <a
+                                  class="item-link"
+                                  href=${this.editorPathFor(object)}
+                                  target=${this.editorTarget()}
+                                  rel=${this.editorRel()}
+                                  @click=${(e: Event) => this.onFolderItemNameClick(e)}
+                                >
+                                  ${object.displayName}
+                                </a>
+                              </div>
                               <div class="meta">${object.type} - ${object.haId}</div>
                             </div>
                             <button
@@ -1339,6 +1373,25 @@ export class SanityOrganizer extends LitElement {
 
     .folder-object-item {
       grid-template-columns: 20px 1fr auto;
+    }
+
+    .item-link {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      color: var(--accent);
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+
+    .item-link:hover {
+      color: color-mix(in srgb, var(--accent) 80%, var(--text-main));
     }
 
     .meta {

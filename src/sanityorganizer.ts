@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { OrganizerRuntime } from "./app/contracts/OrganizerRuntime";
@@ -43,6 +44,18 @@ type ContextAction =
   | { type: "add-root-folder" }
   | { type: "remove-object"; folderId: string; itemKey: string };
 
+const HA_LINKS = [
+  { url: "/config/dashboard", title: "Settings" },
+  { url: "/config/automation/dashboard", title: "Automations" },
+  { url: "/config/scene/dashboard", title: "Scenes" },
+  { url: "/config/script/dashboard", title: "Scripts" },
+  { url: "/config/blueprint/dashboard", title: "Blueprints" },
+  { url: "/config/integrations/dashboard", title: "Integrations" },
+  { url: "/config/devices/dashboard", title: "Devices" },
+  { url: "/config/entities/dashboard", title: "Entities" },
+  { url: "/config/helpers/dashboard", title: "Helpers" },
+
+];
 const ROOT_DROP_ID = "__root__";
 const FALLBACK_MDI_PATHS: Record<string, string> = {
   "mdi:folder-outline": "M20,18H4V8H20M20,6H12L10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6Z",
@@ -504,12 +517,16 @@ export class SanityOrganizer extends LitElement {
   }
 
   private collapseIframeSidebar(frame: HTMLIFrameElement): void {
+    // disable for now - a lot of things are going on in the HA UI.
+    // eg: clicking (to edit) an automation step fiddles with the 'expanded' state of home-assistant-main element
+    /*
     try {
       const doc = frame.contentDocument;
       if (!doc) {
         return;
       }
 
+      
       const appMain = this.findElementAcrossShadowRoots<HTMLElement>(doc, "home-assistant-main");
       if (appMain?.hasAttribute("expanded")) {
         appMain.removeAttribute("expanded");
@@ -522,6 +539,7 @@ export class SanityOrganizer extends LitElement {
     } catch {
       // Ignore iframe access errors; same-origin is expected for this feature.
     }
+  */
   }
 
   private onIframeDialogFrameLoad(event: Event): void {

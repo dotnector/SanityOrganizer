@@ -1465,16 +1465,7 @@ var $ = class extends B {
 		}
 		return null;
 	}
-	collapseIframeSidebar(e) {
-		try {
-			let t = e.contentDocument;
-			if (!t) return;
-			let n = this.findElementAcrossShadowRoots(t, "home-assistant-main");
-			n?.hasAttribute("expanded") && n.removeAttribute("expanded");
-			let r = this.findElementAcrossShadowRoots(t, "ha-sidebar");
-			r?.hasAttribute("expanded") && r.removeAttribute("expanded");
-		} catch {}
-	}
+	collapseIframeSidebar(e) {}
 	onIframeDialogFrameLoad(e) {
 		let t = e.currentTarget;
 		t && (this.collapseIframeSidebar(t), window.setTimeout(() => this.collapseIframeSidebar(t), 50), window.setTimeout(() => this.collapseIframeSidebar(t), 800));

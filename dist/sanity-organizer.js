@@ -752,7 +752,7 @@ var U = class {
 	sanitize(e) {
 		let t = this.factory.createInitial();
 		if (!this.isObject(e)) return t;
-		let n = this.isObject(e.folders) ? e.folders : {}, r = this.isStringArray(e.rootFolderIds) ? e.rootFolderIds : [], i = this.isStringArray(e.expandedFolderIds) ? e.expandedFolderIds : [], a = typeof e.selectedFolderId == "string" ? e.selectedFolderId : null, o = this.isObject(e.settings) ? e.settings : {}, s = o.sortMode === "name" ? "name" : t.settings.sortMode, c = typeof o.autoRefreshSeconds == "number" && Number.isFinite(o.autoRefreshSeconds) ? Math.round(o.autoRefreshSeconds) : t.settings.autoRefreshSeconds, l = Math.max(0, Math.min(600, c)), u = o.openTarget === "this-tab" ? "this-tab" : t.settings.openTarget, d = {};
+		let n = this.isObject(e.folders) ? e.folders : {}, r = this.isStringArray(e.rootFolderIds) ? e.rootFolderIds : [], i = this.isStringArray(e.expandedFolderIds) ? e.expandedFolderIds : [], a = typeof e.selectedFolderId == "string" ? e.selectedFolderId : null, o = this.isObject(e.settings) ? e.settings : {}, s = o.sortMode === "name" ? "name" : t.settings.sortMode, c = typeof o.autoRefreshSeconds == "number" && Number.isFinite(o.autoRefreshSeconds) ? Math.round(o.autoRefreshSeconds) : t.settings.autoRefreshSeconds, l = Math.max(0, Math.min(600, c)), u = o.openTarget === "this-tab" || o.openTarget === "overlay" ? o.openTarget : t.settings.openTarget, d = {};
 		for (let [e, t] of Object.entries(n)) this.isObject(t) && (d[e] = new W(e, typeof t.name == "string" && t.name.trim() ? t.name : "Folder", typeof t.icon == "string" && t.icon.trim() ? t.icon : "mdi:folder-outline", typeof t.parentId == "string" ? t.parentId : null, this.isStringArray(t.children) ? t.children : [], (Array.isArray(t.objects) ? t.objects : []).filter((e) => this.isObject(e)).map((e) => {
 			let t = typeof e.itemKey == "string" ? e.itemKey : typeof e.objectId == "string" ? e.objectId : "", n = typeof e.haId == "string" ? e.haId : typeof e.refId == "string" ? e.refId : "";
 			return new U(t, this.parseObjectType(e.type), n);
@@ -1241,7 +1241,7 @@ var $ = class extends B {
 		Q = this;
 	}
 	constructor(...e) {
-		super(...e), this.organizerState = new je().createInitial(), this.catalog = new K(/* @__PURE__ */ new Map(), []), this.loading = !0, this.errorText = "", this.selectedFolderId = null, this.selectedObjectIds = /* @__PURE__ */ new Set(), this.lastSelectedItemKey = null, this.search = "", this.showSettings = !1, this.contextMenu = null, this.folderDialog = null, this.confirmDialog = null, this.dragTargetFolderId = null, this.initialized = !1, this.refreshTimerId = null, this.stateCloner = new Ae(), this.treeService = new Me(), this.queryService = new Oe(), this.selectionService = new ke(), this.runtimeResolver = new He(), this.onGlobalClick = () => {
+		super(...e), this.organizerState = new je().createInitial(), this.catalog = new K(/* @__PURE__ */ new Map(), []), this.loading = !0, this.errorText = "", this.selectedFolderId = null, this.selectedObjectIds = /* @__PURE__ */ new Set(), this.lastSelectedItemKey = null, this.search = "", this.showSettings = !1, this.contextMenu = null, this.folderDialog = null, this.confirmDialog = null, this.dragTargetFolderId = null, this.iframeDialogOpen = !1, this.iframeDialogUrl = "about:blank", this.initialized = !1, this.refreshTimerId = null, this.stateCloner = new Ae(), this.treeService = new Me(), this.queryService = new Oe(), this.selectionService = new ke(), this.runtimeResolver = new He(), this.onGlobalClick = () => {
 			this.contextMenu &&= null;
 		};
 	}
@@ -1262,6 +1262,8 @@ var $ = class extends B {
 		e.has("hass") && this.hass && this.runtime instanceof Le && this.runtime.updateHass(this.hass), e.has("runtime") && this.runtime && !this.initialized && (this.initialized = !0, await this.initializePanel(), this.applyRefreshTimer(this.settings.autoRefreshSeconds)), !e.get("folderDialog") && this.folderDialog && requestAnimationFrame(() => {
 			let e = this.renderRoot?.querySelector("#folder-name-input");
 			e && (e.focus(), e.select());
+		}), !e.get("iframeDialogOpen") && this.iframeDialogOpen && requestAnimationFrame(() => {
+			(this.renderRoot?.querySelector(".iframe-dialog-shell"))?.focus();
 		});
 	}
 	get settings() {
@@ -1437,13 +1439,45 @@ var $ = class extends B {
 		return e.type === "automation" ? e.editorId ? `/config/automation/edit/${encodeURIComponent(e.editorId)}` : `/config/automation/show/${encodeURIComponent(e.haId)}` : e.type === "scene" ? e.editorId ? `/config/scene/edit/${encodeURIComponent(e.editorId)}` : `/history?entity_id=${encodeURIComponent(e.haId)}` : e.type === "script" ? e.editorId ? `/config/script/edit/${encodeURIComponent(e.editorId)}` : `/config/script/show/${encodeURIComponent(e.haId)}` : e.type === "device" ? `/config/devices/device/${encodeURIComponent(e.haId)}` : e.type === "entity" || e.type === "helper" ? `/history?entity_id=${encodeURIComponent(e.haId)}` : "/config";
 	}
 	editorTarget() {
-		return this.settings.openTarget === "this-tab" ? "_self" : "_blank";
+		return this.settings.openTarget === "new-tab" ? "_blank" : "_self";
 	}
 	editorRel() {
 		return this.settings.openTarget === "new-tab" ? "noopener noreferrer" : "";
 	}
-	onFolderItemNameClick(e) {
-		e.stopPropagation();
+	onFolderItemNameClick(e, t) {
+		e.stopPropagation(), this.settings.openTarget === "overlay" && (e.preventDefault(), this.iframeDialogUrl = this.editorPathFor(t), this.iframeDialogOpen = !0);
+	}
+	closeIframeDialog() {
+		this.iframeDialogOpen = !1, this.iframeDialogUrl = "about:blank";
+	}
+	onIframeDialogKeyDown(e) {
+		e.key === "Escape" && (e.preventDefault(), e.stopPropagation(), this.closeIframeDialog());
+	}
+	findElementAcrossShadowRoots(e, t) {
+		let n = e.querySelector(t);
+		if (n) return n;
+		let r = e.querySelectorAll("*");
+		for (let e of r) {
+			let n = e;
+			if (!n.shadowRoot) continue;
+			let r = this.findElementAcrossShadowRoots(n.shadowRoot, t);
+			if (r) return r;
+		}
+		return null;
+	}
+	collapseIframeSidebar(e) {
+		try {
+			let t = e.contentDocument;
+			if (!t) return;
+			let n = this.findElementAcrossShadowRoots(t, "home-assistant-main");
+			n?.hasAttribute("expanded") && n.removeAttribute("expanded");
+			let r = this.findElementAcrossShadowRoots(t, "ha-sidebar");
+			r?.hasAttribute("expanded") && r.removeAttribute("expanded");
+		} catch {}
+	}
+	onIframeDialogFrameLoad(e) {
+		let t = e.currentTarget;
+		t && (this.collapseIframeSidebar(t), window.setTimeout(() => this.collapseIframeSidebar(t), 50), window.setTimeout(() => this.collapseIframeSidebar(t), 800));
 	}
 	getFilteredObjectIds() {
 		return this.filteredObjects().map((e) => e.itemKey);
@@ -1551,9 +1585,9 @@ var $ = class extends B {
 		});
 	}
 	onOpenTargetChange(e) {
-		let t = e.target.value === "this-tab" ? "this-tab" : "new-tab";
+		let t = e.target.value, n = t === "this-tab" || t === "overlay" ? t : "new-tab";
 		this.mutateState((e) => {
-			e.settings.openTarget = t;
+			e.settings.openTarget = n;
 		});
 	}
 	onAutoRefreshChange(e) {
@@ -1698,6 +1732,41 @@ var $ = class extends B {
       </div>
     ` : M;
 	}
+	renderIframeDialog() {
+		return A`
+      <div
+        class="iframe-dialog ${this.iframeDialogOpen ? "open" : ""}"
+        role="dialog"
+        aria-modal="true"
+        aria-hidden=${String(!this.iframeDialogOpen)}
+        @click=${() => this.closeIframeDialog()}
+      >
+        <div
+          class="iframe-dialog-shell"
+          tabindex="0"
+          @click=${(e) => e.stopPropagation()}
+          @keydown=${this.onIframeDialogKeyDown}
+        >
+          <div class="iframe-dialog-top">
+            <div class="iframe-dialog-title">Edit in Home Assistant</div>
+            <button
+              class="iframe-dialog-close"
+              @click=${() => this.closeIframeDialog()}
+              aria-label="Close embedded page"
+            >
+              ${this.renderIcon("mdi:close")}
+              <span>Close</span>
+            </button>
+          </div>
+          <iframe
+            class="iframe-dialog-frame"
+            src=${this.iframeDialogUrl}
+            @load=${this.onIframeDialogFrameLoad}
+          ></iframe>
+        </div>
+      </div>
+    `;
+	}
 	render() {
 		if (!this.runtime && !this.hass) return A`<div class="panel-shell">Attach this panel inside Home Assistant.</div>`;
 		if (this.loading) return A`
@@ -1730,6 +1799,7 @@ var $ = class extends B {
                     <select class="dialog-input" .value=${this.settings.openTarget} @change=${this.onOpenTargetChange}>
                       <option value="new-tab">New tab</option>
                       <option value="this-tab">This tab</option>
+                      <option value="overlay">Overlay</option>
                     </select>
                   </label>
                   <label>
@@ -1874,7 +1944,7 @@ var $ = class extends B {
                                   href=${this.editorPathFor(t)}
                                   target=${this.editorTarget()}
                                   rel=${this.editorRel()}
-                                  @click=${(e) => this.onFolderItemNameClick(e)}
+                                  @click=${(e) => this.onFolderItemNameClick(e, t)}
                                 >
                                   ${t.displayName}
                                 </a>
@@ -1899,6 +1969,7 @@ var $ = class extends B {
       ${this.renderContextMenu()}
       ${this.renderFolderDialog()}
       ${this.renderConfirmDialog()}
+      ${this.renderIframeDialog()}
     `;
 	}
 	static {
@@ -2391,6 +2462,87 @@ var $ = class extends B {
       gap: 8px;
     }
 
+    .iframe-dialog {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      z-index: 30;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .iframe-dialog.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .iframe-dialog-shell {
+      width: calc(100% - 24px);
+      height: calc(100% - 24px);
+      margin: 12px;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--bg-1);
+      box-shadow: 0 20px 38px rgba(0, 0, 0, 0.28);
+      position: relative;
+      display: grid;
+      grid-template-rows: 64px 1fr;
+    }
+
+    .iframe-dialog-top {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--bg-1) 90%, var(--accent)), var(--bg-1));
+    }
+
+    .iframe-dialog-title {
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .iframe-dialog-close {
+      appearance: none;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+      background: color-mix(in srgb, var(--accent) 10%, var(--bg-1));
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 8px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+    }
+
+    .iframe-dialog-close .fallback-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .iframe-dialog-close:hover {
+      background: color-mix(in srgb, var(--accent) 18%, var(--bg-1));
+    }
+
+    .iframe-dialog-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: var(--bg-1);
+    }
+
     @media (max-width: 1180px) {
       .layout-grid {
         grid-template-columns: 1fr;
@@ -2413,7 +2565,7 @@ var $ = class extends B {
   `;
 	}
 };
-Z([V({ attribute: !1 })], $.prototype, "hass", void 0), Z([V({ attribute: !1 })], $.prototype, "runtime", void 0), Z([H()], $.prototype, "organizerState", void 0), Z([H()], $.prototype, "catalog", void 0), Z([H()], $.prototype, "loading", void 0), Z([H()], $.prototype, "errorText", void 0), Z([H()], $.prototype, "selectedFolderId", void 0), Z([H()], $.prototype, "selectedObjectIds", void 0), Z([H()], $.prototype, "lastSelectedItemKey", void 0), Z([H()], $.prototype, "search", void 0), Z([H()], $.prototype, "showSettings", void 0), Z([H()], $.prototype, "contextMenu", void 0), Z([H()], $.prototype, "folderDialog", void 0), Z([H()], $.prototype, "confirmDialog", void 0), Z([H()], $.prototype, "dragTargetFolderId", void 0), $ = Q = Z([Te("sanity-organizer")], $);
+Z([V({ attribute: !1 })], $.prototype, "hass", void 0), Z([V({ attribute: !1 })], $.prototype, "runtime", void 0), Z([H()], $.prototype, "organizerState", void 0), Z([H()], $.prototype, "catalog", void 0), Z([H()], $.prototype, "loading", void 0), Z([H()], $.prototype, "errorText", void 0), Z([H()], $.prototype, "selectedFolderId", void 0), Z([H()], $.prototype, "selectedObjectIds", void 0), Z([H()], $.prototype, "lastSelectedItemKey", void 0), Z([H()], $.prototype, "search", void 0), Z([H()], $.prototype, "showSettings", void 0), Z([H()], $.prototype, "contextMenu", void 0), Z([H()], $.prototype, "folderDialog", void 0), Z([H()], $.prototype, "confirmDialog", void 0), Z([H()], $.prototype, "dragTargetFolderId", void 0), Z([H()], $.prototype, "iframeDialogOpen", void 0), Z([H()], $.prototype, "iframeDialogUrl", void 0), $ = Q = Z([Te("sanity-organizer")], $);
 //#endregion
 //#region src/main.ts
 var Ke = new He().resolveForBrowser();

@@ -90,6 +90,8 @@ export class SanityOrganizer extends LitElement {
   @state() private folderDialog: FolderDialogState | null = null;
   @state() private confirmDialog: ConfirmDialogState | null = null;
   @state() private dragTargetFolderId: string | null = null;
+  @state() private iframeDialogOpen = false;
+  @state() private iframeDialogUrl = "about:blank";
 
   private initialized = false;
   private refreshTimerId: number | null = null;
@@ -135,6 +137,15 @@ export class SanityOrganizer extends LitElement {
           input.focus();
           input.select();
         }
+      });
+    }
+
+    const previousIframeDialogOpen = changedProps.get("iframeDialogOpen") as boolean | undefined;
+    if (!previousIframeDialogOpen && this.iframeDialogOpen) {
+      // Keep focus on dialog chrome so Escape works immediately.
+      requestAnimationFrame(() => {
+        const shell = this.renderRoot?.querySelector<HTMLElement>(".iframe-dialog-shell");
+        shell?.focus();
       });
     }
   }
@@ -437,18 +448,91 @@ export class SanityOrganizer extends LitElement {
   }
 
   private editorTarget(): string {
-    if (this.settings.openTarget === "this-tab") {
-      return "_self";
-    }
-    return "_blank";
+    return this.settings.openTarget === "new-tab" ? "_blank" : "_self";
   }
 
   private editorRel(): string {
     return this.settings.openTarget === "new-tab" ? "noopener noreferrer" : "";
   }
 
-  private onFolderItemNameClick(event: MouseEvent): void {
+  private onFolderItemNameClick(event: MouseEvent, item: HaItem): void {
     event.stopPropagation();
+    if (this.settings.openTarget !== "overlay") {
+      return;
+    }
+    event.preventDefault();
+    this.iframeDialogUrl = this.editorPathFor(item);
+    this.iframeDialogOpen = true;
+  }
+
+  private closeIframeDialog(): void {
+    this.iframeDialogOpen = false;
+    this.iframeDialogUrl = "about:blank";
+  }
+
+  private onIframeDialogKeyDown(event: KeyboardEvent): void {
+    if (event.key !== "Escape") {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.closeIframeDialog();
+  }
+
+  private findElementAcrossShadowRoots<TElement extends Element>(
+    root: Document | ShadowRoot,
+    selector: string,
+  ): TElement | null {
+    const directMatch = root.querySelector<TElement>(selector);
+    if (directMatch) {
+      return directMatch;
+    }
+
+    const allElements = root.querySelectorAll("*");
+    for (const element of allElements) {
+      const host = element as HTMLElement;
+      if (!host.shadowRoot) {
+        continue;
+      }
+      const nestedMatch = this.findElementAcrossShadowRoots<TElement>(host.shadowRoot, selector);
+      if (nestedMatch) {
+        return nestedMatch;
+      }
+    }
+
+    return null;
+  }
+
+  private collapseIframeSidebar(frame: HTMLIFrameElement): void {
+    try {
+      const doc = frame.contentDocument;
+      if (!doc) {
+        return;
+      }
+
+      const appMain = this.findElementAcrossShadowRoots<HTMLElement>(doc, "home-assistant-main");
+      if (appMain?.hasAttribute("expanded")) {
+        appMain.removeAttribute("expanded");
+      }
+
+      const sidebar = this.findElementAcrossShadowRoots<HTMLElement>(doc, "ha-sidebar");
+      if (sidebar?.hasAttribute("expanded")) {
+        sidebar.removeAttribute("expanded");
+      }
+    } catch {
+      // Ignore iframe access errors; same-origin is expected for this feature.
+    }
+  }
+
+  private onIframeDialogFrameLoad(event: Event): void {
+    const frame = event.currentTarget as HTMLIFrameElement | null;
+    if (!frame) {
+      return;
+    }
+
+    this.collapseIframeSidebar(frame);
+    window.setTimeout(() => this.collapseIframeSidebar(frame), 50);
+    window.setTimeout(() => this.collapseIframeSidebar(frame), 800);
   }
 
   private getFilteredObjectIds(): string[] {
@@ -643,7 +727,7 @@ export class SanityOrganizer extends LitElement {
 
   private onOpenTargetChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    const openTarget = value === "this-tab" ? "this-tab" : "new-tab";
+    const openTarget = value === "this-tab" || value === "overlay" ? value : "new-tab";
     this.mutateState((draft) => {
       draft.settings.openTarget = openTarget;
     });
@@ -824,6 +908,42 @@ export class SanityOrganizer extends LitElement {
     `;
   }
 
+  private renderIframeDialog() {
+    return html`
+      <div
+        class="iframe-dialog ${this.iframeDialogOpen ? "open" : ""}"
+        role="dialog"
+        aria-modal="true"
+        aria-hidden=${String(!this.iframeDialogOpen)}
+        @click=${() => this.closeIframeDialog()}
+      >
+        <div
+          class="iframe-dialog-shell"
+          tabindex="0"
+          @click=${(event: Event) => event.stopPropagation()}
+          @keydown=${this.onIframeDialogKeyDown}
+        >
+          <div class="iframe-dialog-top">
+            <div class="iframe-dialog-title">Edit in Home Assistant</div>
+            <button
+              class="iframe-dialog-close"
+              @click=${() => this.closeIframeDialog()}
+              aria-label="Close embedded page"
+            >
+              ${this.renderIcon("mdi:close")}
+              <span>Close</span>
+            </button>
+          </div>
+          <iframe
+            class="iframe-dialog-frame"
+            src=${this.iframeDialogUrl}
+            @load=${this.onIframeDialogFrameLoad}
+          ></iframe>
+        </div>
+      </div>
+    `;
+  }
+
   protected override render() {
     if (!this.runtime && !this.hass) {
       return html`<div class="panel-shell">Attach this panel inside Home Assistant.</div>`;
@@ -867,6 +987,7 @@ export class SanityOrganizer extends LitElement {
                     <select class="dialog-input" .value=${this.settings.openTarget} @change=${this.onOpenTargetChange}>
                       <option value="new-tab">New tab</option>
                       <option value="this-tab">This tab</option>
+                      <option value="overlay">Overlay</option>
                     </select>
                   </label>
                   <label>
@@ -1026,7 +1147,7 @@ export class SanityOrganizer extends LitElement {
                                   href=${this.editorPathFor(object)}
                                   target=${this.editorTarget()}
                                   rel=${this.editorRel()}
-                                  @click=${(e: MouseEvent) => this.onFolderItemNameClick(e)}
+                                  @click=${(e: MouseEvent) => this.onFolderItemNameClick(e, object)}
                                 >
                                   ${object.displayName}
                                 </a>
@@ -1055,6 +1176,7 @@ export class SanityOrganizer extends LitElement {
       ${this.renderContextMenu()}
       ${this.renderFolderDialog()}
       ${this.renderConfirmDialog()}
+      ${this.renderIframeDialog()}
     `;
   }
 
@@ -1545,6 +1667,87 @@ export class SanityOrganizer extends LitElement {
       display: flex;
       justify-content: flex-end;
       gap: 8px;
+    }
+
+    .iframe-dialog {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      z-index: 30;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .iframe-dialog.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .iframe-dialog-shell {
+      width: calc(100% - 24px);
+      height: calc(100% - 24px);
+      margin: 12px;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--bg-1);
+      box-shadow: 0 20px 38px rgba(0, 0, 0, 0.28);
+      position: relative;
+      display: grid;
+      grid-template-rows: 64px 1fr;
+    }
+
+    .iframe-dialog-top {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--bg-1) 90%, var(--accent)), var(--bg-1));
+    }
+
+    .iframe-dialog-title {
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .iframe-dialog-close {
+      appearance: none;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+      background: color-mix(in srgb, var(--accent) 10%, var(--bg-1));
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 8px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+    }
+
+    .iframe-dialog-close .fallback-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .iframe-dialog-close:hover {
+      background: color-mix(in srgb, var(--accent) 18%, var(--bg-1));
+    }
+
+    .iframe-dialog-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: var(--bg-1);
     }
 
     @media (max-width: 1180px) {

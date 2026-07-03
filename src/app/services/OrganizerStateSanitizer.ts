@@ -59,6 +59,7 @@ export class OrganizerStateSanitizer {
           : "mdi:folder-outline";
       const parentId = typeof rawFolder.parentId === "string" ? rawFolder.parentId : null;
       const children = this.isStringArray(rawFolder.children) ? rawFolder.children : [];
+      const notes = typeof rawFolder.notes === "string" ? rawFolder.notes : "";
       const rawObjects = Array.isArray(rawFolder.objects) ? rawFolder.objects : [];
 
       // Keep only object refs with valid IDs and a recognized type.
@@ -82,7 +83,7 @@ export class OrganizerStateSanitizer {
         })
         .filter((obj) => obj.itemKey.length > 0 && obj.haId.length > 0);
 
-      folders[id] = new FolderNode(id, name, icon, parentId, children, objects);
+      folders[id] = new FolderNode(id, name, icon, parentId, children, objects, notes);
     }
 
     return new OrganizerState(

@@ -21,6 +21,7 @@ export class FolderNode {
   public parentId: string | null;
   public children: string[];
   public objects: FolderHaItemRef[];
+  public notes: string;
 
   public constructor(
     id: string,
@@ -29,6 +30,7 @@ export class FolderNode {
     parentId: string | null,
     children: string[] = [],
     objects: FolderHaItemRef[] = [],
+    notes: string = "",
   ) {
     this.id = id;
     this.name = name;
@@ -36,5 +38,6 @@ export class FolderNode {
     this.parentId = parentId;
     this.children = children;
     this.objects = objects;
+    this.notes = notes;
   }
 }

@@ -36,6 +36,11 @@ type ConfirmDialogState = {
   action: { type: "delete-folder"; folderId: string };
 };
 
+type NotesDialogState = {
+  folderId: string;
+  notes: string;
+};
+
 type ContextAction =
   | { type: "rename-folder"; folderId: string }
   | { type: "delete-folder"; folderId: string }
@@ -61,6 +66,8 @@ const FALLBACK_MDI_PATHS: Record<string, string> = {
   "mdi:folder-outline": "M20,18H4V8H20M20,6H12L10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6Z",
   "mdi:magnify": "M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z",
   "mdi:close": "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+  "mdi:trash-can-outline": "M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z",
+  "mdi:information-outline": "M11,17H13V11H11M12,9.75A1.25,1.25 0 0,0 13.25,8.5A1.25,1.25 0 0,0 12,7.25A1.25,1.25 0 0,0 10.75,8.5A1.25,1.25 0 0,0 12,9.75M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z",
   "mdi:devices": "M3 6H21V4H3C1.9 4 1 4.9 1 6V18C1 19.1 1.9 20 3 20H7V18H3V6M13 12H9V13.78C8.39 14.33 8 15.11 8 16C8 16.89 8.39 17.67 9 18.22V20H13V18.22C13.61 17.67 14 16.88 14 16S13.61 14.33 13 13.78V12M11 17.5C10.17 17.5 9.5 16.83 9.5 16S10.17 14.5 11 14.5 12.5 15.17 12.5 16 11.83 17.5 11 17.5M22 8H16C15.5 8 15 8.5 15 9V19C15 19.5 15.5 20 16 20H22C22.5 20 23 19.5 23 19V9C23 8.5 22.5 8 22 8M21 18H17V10H21V18Z",
   "mdi:shape-outline": "M11,13.5V21.5H3V13.5H11M9,15.5H5V19.5H9V15.5M12,2L17.5,11H6.5L12,2M12,5.86L10.08,9H13.92L12,5.86M17.5,13C20,13 22,15 22,17.5C22,20 20,22 17.5,22C15,22 13,20 13,17.5C13,15 15,13 17.5,13M17.5,15A2.5,2.5 0 0,0 15,17.5A2.5,2.5 0 0,0 17.5,20A2.5,2.5 0 0,0 20,17.5A2.5,2.5 0 0,0 17.5,15Z",
   "mdi:tune-variant": "M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M8 19C6.9 19 6 18.1 6 17C6 15.9 6.9 15 8 15S10 15.9 10 17C10 18.1 9.1 19 8 19M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86M16 9C14.9 9 14 8.1 14 7C14 5.9 14.9 5 16 5S18 5.9 18 7C18 8.1 17.1 9 16 9Z",
@@ -102,6 +109,7 @@ export class SanityOrganizer extends LitElement {
     | null = null;
   @state() private folderDialog: FolderDialogState | null = null;
   @state() private confirmDialog: ConfirmDialogState | null = null;
+  @state() private notesDialog: NotesDialogState | null = null;
   @state() private dragTargetFolderId: string | null = null;
   @state() private iframeDialogOpen = false;
   @state() private iframeDialogUrl = "about:blank";
@@ -159,6 +167,14 @@ export class SanityOrganizer extends LitElement {
       requestAnimationFrame(() => {
         const shell = this.renderRoot?.querySelector<HTMLElement>(".iframe-dialog-shell");
         shell?.focus();
+      });
+    }
+
+    const previousNotesDialog = changedProps.get("notesDialog") as NotesDialogState | null | undefined;
+    if (!previousNotesDialog && this.notesDialog) {
+      requestAnimationFrame(() => {
+        const editor = this.renderRoot?.querySelector<HTMLTextAreaElement>("#notes-editor-input");
+        editor?.focus();
       });
     }
   }
@@ -398,6 +414,62 @@ export class SanityOrganizer extends LitElement {
       if (this.selectedFolderId && removeIds.has(this.selectedFolderId)) {
         this.selectedFolderId = this.resolveSelectedFolderId(this.organizerState, null);
       }
+    }
+  }
+
+  private openNotesDialog(folderId: string): void {
+    const folder = this.organizerState.folders[folderId];
+    if (!folder) {
+      return;
+    }
+    this.notesDialog = {
+      folderId,
+      notes: folder.notes,
+    };
+  }
+
+  private closeNotesDialog(): void {
+    this.notesDialog = null;
+  }
+
+  private onNotesDialogInput(event: Event): void {
+    if (!this.notesDialog) {
+      return;
+    }
+    this.notesDialog = {
+      ...this.notesDialog,
+      notes: (event.target as HTMLTextAreaElement).value,
+    };
+  }
+
+  private onNotesDialogKeyDown(event: KeyboardEvent): void {
+    if (!this.notesDialog || event.isComposing) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeNotesDialog();
+      return;
+    }
+
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      this.saveNotesDialog(true);
+    }
+  }
+
+  private saveNotesDialog(closeAfterSave: boolean): void {
+    const dialog = this.notesDialog;
+    if (!dialog) {
+      return;
+    }
+    this.mutateState((draft) => {
+      this.treeService.setFolderNotes(draft, dialog.folderId, dialog.notes);
+    });
+    if (closeAfterSave) {
+      this.notesDialog = null;
     }
   }
 
@@ -789,6 +861,7 @@ export class SanityOrganizer extends LitElement {
     const hasChildren = folder.children.length > 0;
     const expanded = this.isExpanded(folderId);
     const selected = this.selectedFolderId === folderId;
+    const hasNotes = folder.notes.trim().length > 0;
 
     return html`
       <div class="tree-node" style=${`--depth:${depth}`}>
@@ -823,6 +896,9 @@ export class SanityOrganizer extends LitElement {
             : html`<span class="tree-toggle-spacer" aria-hidden="true"></span>`}
           ${this.renderIcon(folder.icon, "folder-icon")}
           <span class="folder-name">${folder.name}</span>
+          <span class="tree-note-indicator ${hasNotes ? "has-notes" : "no-notes"}" title=${hasNotes ? "Folder has notes" : ""}>
+            ${hasNotes ? this.renderIcon("mdi:information-outline") : nothing}
+          </span>
           <span class="folder-count">${folder.objects.length}</span>
         </div>
         ${hasChildren && expanded
@@ -920,6 +996,35 @@ export class SanityOrganizer extends LitElement {
             <button class="ha-btn danger-fill" @click=${() => this.executeConfirmDialog()}>
               Delete
             </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderNotesDialog() {
+    if (!this.notesDialog) {
+      return nothing;
+    }
+
+    return html`
+      <div class="dialog-backdrop" @click=${() => this.closeNotesDialog()}>
+        <div class="dialog-card notes-dialog-card" @click=${(e: Event) => e.stopPropagation()} @keydown=${this.onNotesDialogKeyDown}>
+          <h3>Folder Notes</h3>
+          <label>
+            Markdown
+            <textarea
+              id="notes-editor-input"
+              class="dialog-input notes-editor"
+              .value=${this.notesDialog.notes}
+              @input=${this.onNotesDialogInput}
+              placeholder="Write folder notes in markdown"
+            ></textarea>
+          </label>
+          <div class="dialog-actions">
+            <button class="ha-btn" @click=${() => this.saveNotesDialog(false)}>Save</button>
+            <button class="ha-btn" @click=${() => this.saveNotesDialog(true)}>Save and close</button>
+            <button class="ha-btn" @click=${() => this.closeNotesDialog()}>Close</button>
           </div>
         </div>
       </div>
@@ -1124,12 +1229,24 @@ export class SanityOrganizer extends LitElement {
                         ${this.renderIcon(selectedFolder.icon)}
                         <h2>${selectedFolder.name}</h2>
                       </div>
+                      <div class="folder-header-actions">
                       <button
-                        class="ha-btn danger-fill"
-                        @click=${() => this.requestDeleteFolder(selectedFolder.id)}
-                      >
-                        Delete Folder
-                      </button>
+                          class="icon-button info folder-action-button"
+                          @click=${() => this.openNotesDialog(selectedFolder.id)}
+                          aria-label="Edit folder notes"
+                          title="Edit folder notes"
+                        >
+                          ${this.renderIcon("mdi:information-outline")}
+                        </button>
+                        <button
+                          class="icon-button danger folder-action-button"
+                          @click=${() => this.requestDeleteFolder(selectedFolder.id)}
+                          aria-label="Delete folder"
+                          title="Delete folder"
+                        >
+                          ${this.renderIcon("mdi:trash-can-outline")}
+                        </button>
+                      </div>
                     </div>
                     <div
                       class="drop-zone"
@@ -1194,6 +1311,7 @@ export class SanityOrganizer extends LitElement {
       ${this.renderContextMenu()}
       ${this.renderFolderDialog()}
       ${this.renderConfirmDialog()}
+      ${this.renderNotesDialog()}
       ${this.renderIframeDialog()}
     `;
   }
@@ -1413,7 +1531,7 @@ export class SanityOrganizer extends LitElement {
       --pad: calc(var(--depth) * 10px);
       position: relative;
       display: grid;
-      grid-template-columns: 24px 22px 1fr auto;
+      grid-template-columns: 24px 22px minmax(0, 1fr) auto auto;
       align-items: center;
       gap: 6px;
       margin: 2px 0;
@@ -1476,6 +1594,31 @@ export class SanityOrganizer extends LitElement {
     .folder-count {
       color: var(--text-muted);
       font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+    }
+
+    .tree-note-indicator {
+      display: inline-grid;
+      place-items: center;
+      color: color-mix(in srgb, var(--accent) 70%, var(--text-muted));
+      line-height: 1;
+      transform: translateY(1px);
+      width: 12px;
+      height: 12px;
+      overflow: hidden;
+    }
+
+    .tree-note-indicator.no-notes {
+      visibility: hidden;
+    }
+
+    .tree-note-indicator ha-icon,
+    .tree-note-indicator .fallback-icon {
+      width: 12px;
+      height: 12px;
+      --mdc-icon-size: 12px;
     }
 
     .icon-button {
@@ -1493,6 +1636,26 @@ export class SanityOrganizer extends LitElement {
 
     .icon-button:hover {
       background: color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+
+    .icon-button.danger {
+      color: var(--error-color, #db4437);
+      border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 45%, var(--line));
+      background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
+    }
+
+    .icon-button.danger:hover {
+      background: color-mix(in srgb, var(--error-color, #db4437) 18%, transparent);
+    }
+
+    .icon-button.info {
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+
+    .icon-button.info:hover {
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
     .source-actions {
@@ -1577,6 +1740,23 @@ export class SanityOrganizer extends LitElement {
       align-items: center;
       gap: 8px;
       min-width: 0;
+    }
+
+    .folder-header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .folder-action-button {
+      width: 26px;
+      height: 26px;
+      --mdc-icon-size: 16px;
+    }
+
+    .folder-action-button .fallback-icon {
+      width: 16px;
+      height: 16px;
     }
 
     .folder-header h2 {
@@ -1669,6 +1849,17 @@ export class SanityOrganizer extends LitElement {
       gap: 6px;
       color: var(--text-muted);
       font-size: 12px;
+    }
+
+    .notes-dialog-card {
+      width: min(720px, 100%);
+    }
+
+    .notes-editor {
+      min-height: 260px;
+      resize: vertical;
+      line-height: 1.5;
+      font-family: var(--paper-font-body1_-_font-family, "Segoe UI", sans-serif);
     }
 
     .dialog-input {

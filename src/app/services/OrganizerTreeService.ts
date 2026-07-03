@@ -67,6 +67,14 @@ export class OrganizerTreeService {
     }
   }
 
+  public setFolderNotes(state: OrganizerState, folderId: string, notes: string): void {
+    const folder = state.folders[folderId];
+    if (!folder) {
+      return;
+    }
+    folder.notes = notes;
+  }
+
   public deleteFolder(state: OrganizerState, folderId: string): Set<string> {
     const removeIds = new Set<string>();
     this.collectDescendants(state, folderId, removeIds, new Set<string>());

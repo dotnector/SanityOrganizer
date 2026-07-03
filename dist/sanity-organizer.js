@@ -1217,7 +1217,44 @@ function Z(e, t, n, r) {
 }
 //#endregion
 //#region src/sanityorganizer.ts
-var Q, Ue = "__root__", We = {
+var Q, Ue = [
+	{
+		url: "/config/dashboard",
+		title: "Settings"
+	},
+	{
+		url: "/config/automation/dashboard",
+		title: "Automations"
+	},
+	{
+		url: "/config/scene/dashboard",
+		title: "Scenes"
+	},
+	{
+		url: "/config/script/dashboard",
+		title: "Scripts"
+	},
+	{
+		url: "/config/blueprint/dashboard",
+		title: "Blueprints"
+	},
+	{
+		url: "/config/integrations/dashboard",
+		title: "Integrations"
+	},
+	{
+		url: "/config/devices/dashboard",
+		title: "Devices"
+	},
+	{
+		url: "/config/entities/dashboard",
+		title: "Entities"
+	},
+	{
+		url: "/config/helpers/dashboard",
+		title: "Helpers"
+	}
+], We = "__root__", Ge = {
 	"mdi:folder-outline": "M20,18H4V8H20M20,6H12L10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6Z",
 	"mdi:magnify": "M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z",
 	"mdi:close": "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
@@ -1232,7 +1269,7 @@ var Q, Ue = "__root__", We = {
 	"mdi:archive-outline": "M20 21H4V10H6V19H18V10H20V21M3 3H21V9H3V3M9.5 11H14.5C14.78 11 15 11.22 15 11.5V13H9V11.5C9 11.22 9.22 11 9.5 11M5 5V7H19V5H5Z",
 	"mdi:alert-outline": "M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"
 };
-function Ge(e) {
+function Ke(e) {
 	let t = Math.random().toString(36).slice(2, 10);
 	return `${e}_${Date.now().toString(36)}_${t}`;
 }
@@ -1374,7 +1411,7 @@ var $ = class extends B {
 		let t = e.name.trim(), n = e.icon.trim() || "mdi:folder-outline";
 		if (t) {
 			if (e.mode === "add") {
-				let r = Ge("folder");
+				let r = Ke("folder");
 				this.mutateState((i) => {
 					this.treeService.createFolder(i, e.parentId, r, t, n), i.selectedFolderId = r;
 				}), this.selectedFolderId = r;
@@ -1434,6 +1471,17 @@ var $ = class extends B {
 		this.mutateState((n) => {
 			this.treeService.removeObjectFromFolder(n, e, t);
 		});
+	}
+	renderLinksToHa() {
+		return A`
+    <div class="ha-links">
+      ${Ue.map((e, t) => A`
+          <a href=${e.url} target="_blank" class="ha-btn ha-btn-small" rel="noopener noreferrer">
+            ${e.title}
+          </a>
+        `)}
+    </div>
+  `;
 	}
 	editorPathFor(e) {
 		return e.type === "automation" ? e.editorId ? `/config/automation/edit/${encodeURIComponent(e.editorId)}` : `/config/automation/show/${encodeURIComponent(e.haId)}` : e.type === "scene" ? e.editorId ? `/config/scene/edit/${encodeURIComponent(e.editorId)}` : `/history?entity_id=${encodeURIComponent(e.haId)}` : e.type === "script" ? e.editorId ? `/config/script/edit/${encodeURIComponent(e.editorId)}` : `/config/script/show/${encodeURIComponent(e.haId)}` : e.type === "device" ? `/config/devices/device/${encodeURIComponent(e.haId)}` : e.type === "entity" || e.type === "helper" ? `/history?entity_id=${encodeURIComponent(e.haId)}` : "/config";
@@ -1589,7 +1637,7 @@ var $ = class extends B {
 	}
 	renderIcon(e, t = "") {
 		if (customElements.get("ha-icon")) return t ? A`<ha-icon class=${t} .icon=${e}></ha-icon>` : A`<ha-icon .icon=${e}></ha-icon>`;
-		let n = We[e] ?? We["mdi:folder-outline"];
+		let n = Ge[e] ?? Ge["mdi:folder-outline"];
 		return A`
       <svg
         class=${t ? `fallback-icon ${t}` : "fallback-icon"}
@@ -1818,6 +1866,10 @@ var $ = class extends B {
 
         ${this.errorText ? A`<div class="error-banner">${this.errorText}</div>` : M}
 
+        <div class="ha-links">
+          ${this.renderLinksToHa()}
+        </div>
+
         <div class="search-row">
           ${this.renderIcon("mdi:magnify", "search-icon")}
           <input
@@ -1841,7 +1893,7 @@ var $ = class extends B {
 		})}
           >
             <div class="pane-title">Folders</div>
-            <div class="root-drop-zone" data-drop-id=${Ue}>Drop here to move folder to root</div>
+            <div class="root-drop-zone" data-drop-id=${We}>Drop here to move folder to root</div>
             ${this.organizerState.rootFolderIds.length === 0 ? A`<div class="empty">No folders yet. Create one to start organizing.</div>` : [...this.organizerState.rootFolderIds].sort((e, t) => {
 			let n = this.organizerState.folders[e], r = this.organizerState.folders[t];
 			return (n?.name ?? "").localeCompare(r?.name ?? "", void 0, { sensitivity: "base" });
@@ -2042,6 +2094,11 @@ var $ = class extends B {
       padding: 8px 12px;
       cursor: pointer;
       font-weight: 600;
+    }
+
+    .ha-btn-small {
+      font-size: 10px;
+      padding: 4px 8px;
     }
 
     .ha-btn:disabled {
@@ -2559,10 +2616,10 @@ var $ = class extends B {
 Z([V({ attribute: !1 })], $.prototype, "hass", void 0), Z([V({ attribute: !1 })], $.prototype, "runtime", void 0), Z([H()], $.prototype, "organizerState", void 0), Z([H()], $.prototype, "catalog", void 0), Z([H()], $.prototype, "loading", void 0), Z([H()], $.prototype, "errorText", void 0), Z([H()], $.prototype, "selectedFolderId", void 0), Z([H()], $.prototype, "selectedObjectIds", void 0), Z([H()], $.prototype, "lastSelectedItemKey", void 0), Z([H()], $.prototype, "search", void 0), Z([H()], $.prototype, "showSettings", void 0), Z([H()], $.prototype, "contextMenu", void 0), Z([H()], $.prototype, "folderDialog", void 0), Z([H()], $.prototype, "confirmDialog", void 0), Z([H()], $.prototype, "dragTargetFolderId", void 0), Z([H()], $.prototype, "iframeDialogOpen", void 0), Z([H()], $.prototype, "iframeDialogUrl", void 0), $ = Q = Z([Te("sanity-organizer")], $);
 //#endregion
 //#region src/main.ts
-var Ke = new He().resolveForBrowser();
-if (Ke) {
+var qe = new He().resolveForBrowser();
+if (qe) {
 	let e = document.querySelectorAll("sanity-organizer");
-	for (let t of e) t.runtime = Ke;
+	for (let t of e) t.runtime = qe;
 }
 //#endregion
 

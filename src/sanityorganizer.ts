@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { marked } from "marked";
 import type { OrganizerRuntime } from "./app/contracts/OrganizerRuntime";
 import { FolderNode } from "./app/domain/FolderNode";
 import { HaItemCatalog } from "./app/domain/HaItemCatalog";
@@ -92,6 +94,12 @@ Defines the main organizer web component including UI, interactions, and state o
  */
 export class SanityOrganizer extends LitElement {
   private static readonly LOG_PREFIX = "[SanityOrganizer][UI]";
+  private static readonly NOTES_DIALOG_MIN_WIDTH = 520;
+  private static readonly NOTES_DIALOG_MIN_HEIGHT = 320;
+  private static readonly NOTES_DIALOG_MAX_WIDTH = 1400;
+  private static readonly NOTES_DIALOG_MAX_HEIGHT = 1100;
+  private static readonly NOTES_DIALOG_DEFAULT_WIDTH = 720;
+  private static readonly NOTES_DIALOG_DEFAULT_HEIGHT = 460;
   @property({ attribute: false }) public hass?: HaConnection;
   @property({ attribute: false }) public runtime?: OrganizerRuntime;
 
@@ -116,6 +124,11 @@ export class SanityOrganizer extends LitElement {
 
   private initialized = false;
   private refreshTimerId: number | null = null;
+  private notesDialogResizeObserver: ResizeObserver | null = null;
+  private notesDialogResizeSaveTimerId: number | null = null;
+  private notesDialogInitialWidth = 0;
+  private notesDialogInitialHeight = 0;
+  private notesDialogHasUserResized = false;
   private readonly stateCloner = new OrganizerStateCloner();
   private readonly treeService = new OrganizerTreeService();
   private readonly queryService = new HaItemQueryService();
@@ -131,6 +144,7 @@ export class SanityOrganizer extends LitElement {
     super.disconnectedCallback();
     this.removeEventListener("click", this.onGlobalClick);
     this.applyRefreshTimer(0);
+    this.stopNotesDialogResizeTracking();
   }
 
   protected override async updated(changedProps: Map<string, unknown>): Promise<void> {
@@ -175,7 +189,16 @@ export class SanityOrganizer extends LitElement {
       requestAnimationFrame(() => {
         const editor = this.renderRoot?.querySelector<HTMLTextAreaElement>("#notes-editor-input");
         editor?.focus();
+
+        const dialogCard = this.renderRoot?.querySelector<HTMLElement>(".notes-dialog-card");
+        if (dialogCard) {
+          this.startNotesDialogResizeTracking(dialogCard);
+        }
       });
+    }
+
+    if (previousNotesDialog && !this.notesDialog) {
+      this.stopNotesDialogResizeTracking();
     }
   }
 
@@ -458,6 +481,41 @@ export class SanityOrganizer extends LitElement {
       event.preventDefault();
       this.saveNotesDialog(true);
     }
+  }
+
+  private sanitizePreviewHtml(htmlText: string): string {
+    const template = document.createElement("template");
+    template.innerHTML = htmlText;
+
+    template.content
+      .querySelectorAll("script, style, iframe, object, embed, link, meta")
+      .forEach((element) => element.remove());
+
+    for (const element of template.content.querySelectorAll("*")) {
+      for (const attribute of [...element.attributes]) {
+        const name = attribute.name.toLowerCase();
+        const value = attribute.value.trim().toLowerCase();
+        if (name.startsWith("on")) {
+          element.removeAttribute(attribute.name);
+          continue;
+        }
+        if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
+          element.removeAttribute(attribute.name);
+        }
+      }
+    }
+
+    return template.innerHTML;
+  }
+
+  private renderMarkdownPreview(markdown: string): TemplateResult {
+    const renderedHtml = marked.parse(markdown ?? "", {
+      gfm: true,
+      breaks: true,
+      async: false,
+    }) as string;
+    const safeHtml = this.sanitizePreviewHtml(renderedHtml);
+    return html`${unsafeHTML(safeHtml)}`;
   }
 
   private saveNotesDialog(closeAfterSave: boolean): void {
@@ -832,6 +890,117 @@ export class SanityOrganizer extends LitElement {
     this.applyRefreshTimer(nextSeconds);
   }
 
+  private clampNotesDialogWidth(value: number): number {
+    return Math.max(
+      SanityOrganizer.NOTES_DIALOG_MIN_WIDTH,
+      Math.min(SanityOrganizer.NOTES_DIALOG_MAX_WIDTH, Math.round(value)),
+    );
+  }
+
+  private clampNotesDialogHeight(value: number): number {
+    return Math.max(
+      SanityOrganizer.NOTES_DIALOG_MIN_HEIGHT,
+      Math.min(SanityOrganizer.NOTES_DIALOG_MAX_HEIGHT, Math.round(value)),
+    );
+  }
+
+  private notesDialogStyleText(): string {
+    const width = this.clampNotesDialogWidth(this.settings.notesDialogWidth);
+    const height = this.clampNotesDialogHeight(this.settings.notesDialogHeight);
+    return [
+      `width: min(${width}px, calc(100vw - 24px));`,
+      `height: min(${height}px, calc(100vh - 24px));`,
+      `min-width: ${SanityOrganizer.NOTES_DIALOG_MIN_WIDTH}px;`,
+      `min-height: ${SanityOrganizer.NOTES_DIALOG_MIN_HEIGHT}px;`,
+      `max-width: calc(100vw - 24px);`,
+      `max-height: calc(100vh - 24px);`,
+    ].join(" ");
+  }
+
+  private cycleNotesDialogViewMode(): void {
+    const cycle: OrganizerSettings["notesDialogViewMode"][] = ["both", "markdown", "preview"];
+    const current = this.settings.notesDialogViewMode;
+    const currentIndex = cycle.indexOf(current);
+    const nextMode = cycle[(currentIndex + 1 + cycle.length) % cycle.length];
+    this.mutateState((draft) => {
+      draft.settings.notesDialogViewMode = nextMode;
+    });
+  }
+
+  private persistNotesDialogSize(width: number, height: number): void {
+    const nextWidth = this.clampNotesDialogWidth(width);
+    const nextHeight = this.clampNotesDialogHeight(height);
+    if (
+      nextWidth === this.settings.notesDialogWidth
+      && nextHeight === this.settings.notesDialogHeight
+    ) {
+      return;
+    }
+    this.mutateState((draft) => {
+      draft.settings.notesDialogWidth = nextWidth;
+      draft.settings.notesDialogHeight = nextHeight;
+    });
+  }
+
+  private startNotesDialogResizeTracking(element: HTMLElement): void {
+    this.stopNotesDialogResizeTracking();
+    this.notesDialogInitialWidth = element.offsetWidth;
+    this.notesDialogInitialHeight = element.offsetHeight;
+    this.notesDialogHasUserResized = false;
+
+    this.notesDialogResizeObserver = new ResizeObserver((entries) => {
+      const first = entries[0];
+      if (!first) {
+        return;
+      }
+
+      const measuredElement = first.target as HTMLElement;
+      const measuredWidth = measuredElement.offsetWidth;
+      const measuredHeight = measuredElement.offsetHeight;
+
+      if (!this.notesDialogHasUserResized) {
+        const widthDelta = Math.abs(measuredWidth - this.notesDialogInitialWidth);
+        const heightDelta = Math.abs(measuredHeight - this.notesDialogInitialHeight);
+        // Ignore layout/open-time size jitter; only persist after an intentional resize drag.
+        if (widthDelta < 4 && heightDelta < 4) {
+          return;
+        }
+        this.notesDialogHasUserResized = true;
+      }
+
+      if (this.notesDialogResizeSaveTimerId !== null) {
+        window.clearTimeout(this.notesDialogResizeSaveTimerId);
+      }
+
+      this.notesDialogResizeSaveTimerId = window.setTimeout(() => {
+        this.persistNotesDialogSize(measuredWidth, measuredHeight);
+        this.notesDialogResizeSaveTimerId = null;
+      }, 180);
+    });
+    this.notesDialogResizeObserver.observe(element);
+  }
+
+  private stopNotesDialogResizeTracking(): void {
+    if (this.notesDialogResizeObserver) {
+      this.notesDialogResizeObserver.disconnect();
+      this.notesDialogResizeObserver = null;
+    }
+    if (this.notesDialogResizeSaveTimerId !== null) {
+      window.clearTimeout(this.notesDialogResizeSaveTimerId);
+      this.notesDialogResizeSaveTimerId = null;
+    }
+    this.notesDialogHasUserResized = false;
+    this.notesDialogInitialWidth = 0;
+    this.notesDialogInitialHeight = 0;
+  }
+
+  private resetNotesDialogSize(): void {
+    this.mutateState((draft) => {
+      draft.settings.notesDialogWidth = SanityOrganizer.NOTES_DIALOG_DEFAULT_WIDTH;
+      draft.settings.notesDialogHeight = SanityOrganizer.NOTES_DIALOG_DEFAULT_HEIGHT;
+    });
+  }
+
   private renderIcon(icon: string, className = ""): TemplateResult {
     if (customElements.get("ha-icon")) {
       return className
@@ -1007,20 +1176,53 @@ export class SanityOrganizer extends LitElement {
       return nothing;
     }
 
+    const viewMode = this.settings.notesDialogViewMode;
+    const showMarkdown = viewMode !== "preview";
+    const showPreview = viewMode !== "markdown";
+    const splitClass = viewMode === "markdown"
+      ? "notes-split only-markdown"
+      : viewMode === "preview"
+        ? "notes-split only-preview"
+        : "notes-split";
+
     return html`
       <div class="dialog-backdrop" @click=${() => this.closeNotesDialog()}>
-        <div class="dialog-card notes-dialog-card" @click=${(e: Event) => e.stopPropagation()} @keydown=${this.onNotesDialogKeyDown}>
-          <h3>Folder Notes</h3>
-          <label>
-            Markdown
-            <textarea
-              id="notes-editor-input"
-              class="dialog-input notes-editor"
-              .value=${this.notesDialog.notes}
-              @input=${this.onNotesDialogInput}
-              placeholder="Write folder notes in markdown"
-            ></textarea>
-          </label>
+        <div
+          class="dialog-card notes-dialog-card"
+          style=${this.notesDialogStyleText()}
+          @click=${(e: Event) => e.stopPropagation()}
+          @keydown=${this.onNotesDialogKeyDown}
+        >
+          <div class="notes-dialog-titlebar">
+            <h3>Folder Notes</h3>
+            <button
+              class="ha-btn notes-view-toggle-btn"
+              @click=${() => this.cycleNotesDialogViewMode()}
+              title="Cycle notes dialog view"
+            >
+              Toggle view
+            </button>
+          </div>
+          <div class=${splitClass}>
+            ${showMarkdown
+              ? html`<label class="notes-pane">
+                  <span class="notes-pane-title">Markdown</span>
+                  <textarea
+                    id="notes-editor-input"
+                    class="dialog-input notes-editor"
+                    .value=${this.notesDialog.notes}
+                    @input=${this.onNotesDialogInput}
+                    placeholder="Write folder notes in markdown"
+                  ></textarea>
+                </label>`
+              : nothing}
+            ${showPreview
+              ? html`<div class="notes-pane">
+                  <div class="notes-pane-title">Preview</div>
+                  <article class="notes-preview">${this.renderMarkdownPreview(this.notesDialog.notes)}</article>
+                </div>`
+              : nothing}
+          </div>
           <div class="dialog-actions">
             <button class="ha-btn" @click=${() => this.saveNotesDialog(false)}>Save</button>
             <button class="ha-btn" @click=${() => this.saveNotesDialog(true)}>Save and close</button>
@@ -1132,6 +1334,12 @@ export class SanityOrganizer extends LitElement {
                       @change=${this.onAutoRefreshChange}
                     />
                   </label>
+                   <label>
+                    &nbsp;
+                    <button class="ha-btn settings-reset-btn" @click=${() => this.resetNotesDialogSize()}>
+                      Reset notes dialog
+                    </button>
+                  </label>
                 </div>
               </section>
             `
@@ -1147,7 +1355,7 @@ export class SanityOrganizer extends LitElement {
             id="so-search"
             class="search-input"
             type="text"
-            placeholder="Search folders and objects"
+            placeholder="Search Home Assistant entities"
             .value=${this.search}
             @input=${this.onSearchInput}
           />
@@ -1425,6 +1633,10 @@ export class SanityOrganizer extends LitElement {
       display: grid;
       gap: 6px;
       color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .settings-reset-btn {
       font-size: 12px;
     }
 
@@ -1852,14 +2064,125 @@ export class SanityOrganizer extends LitElement {
     }
 
     .notes-dialog-card {
-      width: min(720px, 100%);
+      resize: both;
+      overflow: auto;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-width: 520px;
+      min-height: 320px;
+    }
+
+    .notes-dialog-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .notes-dialog-titlebar h3 {
+      margin: 0;
+    }
+
+    .notes-view-toggle-btn {
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+
+    .notes-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .notes-split.only-markdown,
+    .notes-split.only-preview {
+      grid-template-columns: 1fr;
+    }
+
+    .notes-pane {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .notes-pane-title {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .notes-editor {
-      min-height: 260px;
-      resize: vertical;
+      min-height: 0;
+      height: 100%;
+      resize: none;
       line-height: 1.5;
       font-family: var(--paper-font-body1_-_font-family, "Segoe UI", sans-serif);
+    }
+
+    .notes-preview {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: color-mix(in srgb, var(--bg-1) 98%, white);
+      overflow: auto;
+      min-height: 0;
+      height: 100%;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .notes-preview :is(h1, h2, h3, h4, h5, h6) {
+      margin: 0.65em 0 0.35em;
+      line-height: 1.2;
+    }
+
+    .notes-preview > :is(h1, h2, h3, h4, h5, h6):first-child {
+      margin-top: 0;
+    }
+
+    .notes-preview p,
+    .notes-preview ul,
+    .notes-preview ol,
+    .notes-preview blockquote,
+    .notes-preview pre,
+    .notes-preview table {
+      margin: 0 0 0.75em;
+    }
+
+    .notes-preview :is(ul, ol) {
+      padding-left: 1.2em;
+    }
+
+    .notes-preview pre,
+    .notes-preview code {
+      font-family: "Cascadia Code", Consolas, monospace;
+    }
+
+    .notes-preview pre {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      overflow: auto;
+      background: color-mix(in srgb, var(--bg-1) 94%, black 6%);
+    }
+
+    .notes-preview blockquote {
+      border-left: 3px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+      padding-left: 8px;
+      color: var(--text-muted);
+    }
+
+    .notes-preview a {
+      color: var(--accent);
+    }
+
+    .notes-preview hr {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 10px 0;
     }
 
     .dialog-input {
@@ -1970,6 +2293,15 @@ export class SanityOrganizer extends LitElement {
 
       .list {
         max-height: 300px;
+      }
+
+      .notes-split {
+        grid-template-columns: 1fr;
+      }
+
+      .notes-editor,
+      .notes-preview {
+        min-height: 220px;
       }
     }
 

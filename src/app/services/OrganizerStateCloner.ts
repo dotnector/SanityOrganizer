@@ -33,6 +33,9 @@ export class OrganizerStateCloner {
         state.settings.sortMode,
         state.settings.autoRefreshSeconds,
         state.settings.openTarget,
+        state.settings.notesDialogWidth,
+        state.settings.notesDialogHeight,
+        state.settings.notesDialogViewMode,
       ),
     );
   }

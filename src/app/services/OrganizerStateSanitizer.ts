@@ -43,6 +43,20 @@ export class OrganizerStateSanitizer {
       rawSettings.openTarget === "this-tab" || rawSettings.openTarget === "overlay"
         ? rawSettings.openTarget
         : defaults.settings.openTarget;
+    const notesDialogWidthRaw =
+      typeof rawSettings.notesDialogWidth === "number" && Number.isFinite(rawSettings.notesDialogWidth)
+        ? Math.round(rawSettings.notesDialogWidth)
+        : defaults.settings.notesDialogWidth;
+    const notesDialogHeightRaw =
+      typeof rawSettings.notesDialogHeight === "number" && Number.isFinite(rawSettings.notesDialogHeight)
+        ? Math.round(rawSettings.notesDialogHeight)
+        : defaults.settings.notesDialogHeight;
+    const notesDialogViewMode =
+      rawSettings.notesDialogViewMode === "markdown" || rawSettings.notesDialogViewMode === "preview"
+        ? rawSettings.notesDialogViewMode
+        : defaults.settings.notesDialogViewMode;
+    const notesDialogWidth = Math.max(520, Math.min(1400, notesDialogWidthRaw));
+    const notesDialogHeight = Math.max(320, Math.min(1100, notesDialogHeightRaw));
 
     // Rebuild folders entry-by-entry and coerce each field into a valid shape.
     const folders: Record<string, FolderNode> = {};
@@ -91,7 +105,14 @@ export class OrganizerStateSanitizer {
       rootFolderIds,
       expandedFolderIds,
       selectedFolderId && selectedFolderId in folders ? selectedFolderId : rootFolderIds[0] ?? null,
-      new OrganizerSettings(sortMode, autoRefreshSeconds, openTarget),
+      new OrganizerSettings(
+        sortMode,
+        autoRefreshSeconds,
+        openTarget,
+        notesDialogWidth,
+        notesDialogHeight,
+        notesDialogViewMode,
+      ),
     );
   }
 

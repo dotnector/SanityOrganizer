@@ -2750,8 +2750,36 @@ var $ = class extends k {
 		Q = this;
 	}
 	constructor(...e) {
-		super(...e), this.organizerState = new hn().createInitial(), this.catalog = new ln(/* @__PURE__ */ new Map(), []), this.loading = !0, this.errorText = "", this.selectedFolderId = null, this.selectedObjectIds = /* @__PURE__ */ new Set(), this.lastSelectedItemKey = null, this.search = "", this.showSettings = !1, this.contextMenu = null, this.folderDialog = null, this.confirmDialog = null, this.notesDialog = null, this.dragTargetFolderId = null, this.iframeDialogOpen = !1, this.iframeDialogUrl = "about:blank", this.initialized = !1, this.refreshTimerId = null, this.notesDialogResizeObserver = null, this.notesDialogResizeSaveTimerId = null, this.notesDialogInitialWidth = 0, this.notesDialogInitialHeight = 0, this.notesDialogHasUserResized = !1, this.stateCloner = new mn(), this.treeService = new gn(), this.queryService = new fn(), this.selectionService = new pn(), this.runtimeResolver = new En(), this.onGlobalClick = () => {
+		super(...e), this.organizerState = new hn().createInitial(), this.catalog = new ln(/* @__PURE__ */ new Map(), []), this.loading = !0, this.errorText = "", this.selectedFolderId = null, this.selectedObjectIds = /* @__PURE__ */ new Set(), this.lastSelectedItemKey = null, this.search = "", this.showSettings = !1, this.contextMenu = null, this.folderDialog = null, this.confirmDialog = null, this.notesDialog = null, this.pendingObjectDelete = null, this.dragTargetFolderId = null, this.iframeDialogOpen = !1, this.iframeDialogUrl = "about:blank", this.initialized = !1, this.refreshTimerId = null, this.notesDialogResizeObserver = null, this.notesDialogResizeSaveTimerId = null, this.notesDialogInitialWidth = 0, this.notesDialogInitialHeight = 0, this.notesDialogHasUserResized = !1, this.pendingObjectDeleteTimerId = null, this.stateCloner = new mn(), this.treeService = new gn(), this.queryService = new fn(), this.selectionService = new pn(), this.runtimeResolver = new En(), this.onGlobalClick = () => {
 			this.contextMenu &&= null;
+		}, this.onGlobalKeyDown = (e) => {
+			if (e.defaultPrevented || e.isComposing) return;
+			if (this.notesDialog && !e.composedPath().some((e) => e instanceof HTMLElement && e.classList.contains("notes-dialog-card"))) {
+				if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "t") {
+					e.preventDefault(), this.cycleNotesDialogViewMode();
+					return;
+				}
+				if (e.key === "Escape") {
+					e.preventDefault(), this.closeNotesDialog();
+					return;
+				}
+			}
+			if (e.key === "Escape" && e.target instanceof HTMLInputElement && e.target.id === "so-search") {
+				e.preventDefault(), e.target.select();
+				return;
+			}
+			let t = this.isTypingTarget(e.target), n = e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey, r = (e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k";
+			if (!t && (n || r)) {
+				e.preventDefault(), this.focusSearchInput();
+				return;
+			}
+			if (!t) {
+				if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "n") {
+					e.preventDefault(), this.selectedFolderId && this.openAddFolderDialog(this.selectedFolderId);
+					return;
+				}
+				e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "i" && (e.preventDefault(), this.selectedFolderId && this.openNotesDialog(this.selectedFolderId));
+			}
 		};
 	}
 	static {
@@ -2776,10 +2804,10 @@ var $ = class extends k {
 		this.NOTES_DIALOG_DEFAULT_HEIGHT = 460;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.addEventListener("click", this.onGlobalClick);
+		super.connectedCallback(), this.addEventListener("click", this.onGlobalClick), window.addEventListener("keydown", this.onGlobalKeyDown);
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this.removeEventListener("click", this.onGlobalClick), this.applyRefreshTimer(0), this.stopNotesDialogResizeTracking();
+		super.disconnectedCallback(), this.removeEventListener("click", this.onGlobalClick), window.removeEventListener("keydown", this.onGlobalKeyDown), this.applyRefreshTimer(0), this.stopNotesDialogResizeTracking(), this.cancelObjectDeleteConfirmation();
 	}
 	async updated(e) {
 		if (e.has("hass") && this.hass && !this.runtime) {
@@ -2964,6 +2992,10 @@ var $ = class extends k {
 	}
 	onNotesDialogKeyDown(e) {
 		if (!(!this.notesDialog || e.isComposing)) {
+			if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "t") {
+				e.preventDefault(), this.cycleNotesDialogViewMode();
+				return;
+			}
 			if (e.key === "Escape") {
 				e.preventDefault(), e.stopPropagation(), this.closeNotesDialog();
 				return;
@@ -3019,6 +3051,22 @@ var $ = class extends k {
 		this.mutateState((n) => {
 			this.treeService.removeObjectFromFolder(n, e, t);
 		});
+	}
+	startObjectDeleteConfirmation(e, t) {
+		this.pendingObjectDeleteTimerId !== null && window.clearTimeout(this.pendingObjectDeleteTimerId), this.pendingObjectDelete = {
+			folderId: e,
+			itemKey: t
+		}, this.pendingObjectDeleteTimerId = window.setTimeout(() => {
+			this.cancelObjectDeleteConfirmation();
+		}, 2e3);
+	}
+	confirmObjectDelete() {
+		if (!this.pendingObjectDelete) return;
+		let { folderId: e, itemKey: t } = this.pendingObjectDelete;
+		this.cancelObjectDeleteConfirmation(), this.removeObjectFromFolder(e, t);
+	}
+	cancelObjectDeleteConfirmation() {
+		this.pendingObjectDeleteTimerId !== null && (window.clearTimeout(this.pendingObjectDeleteTimerId), this.pendingObjectDeleteTimerId = null), this.pendingObjectDelete = null;
 	}
 	editorPathFor(e) {
 		return e.type === "automation" ? e.editorId ? `/config/automation/edit/${encodeURIComponent(e.editorId)}` : `/config/automation/show/${encodeURIComponent(e.haId)}` : e.type === "scene" ? e.editorId ? `/config/scene/edit/${encodeURIComponent(e.editorId)}` : `/history?entity_id=${encodeURIComponent(e.haId)}` : e.type === "script" ? e.editorId ? `/config/script/edit/${encodeURIComponent(e.editorId)}` : `/config/script/show/${encodeURIComponent(e.haId)}` : e.type === "device" ? `/config/devices/device/${encodeURIComponent(e.haId)}` : e.type === "entity" || e.type === "helper" ? `/history?entity_id=${encodeURIComponent(e.haId)}` : "/config";
@@ -3143,6 +3191,15 @@ var $ = class extends k {
 			action: n
 		};
 	}
+	isTypingTarget(e) {
+		if (!(e instanceof HTMLElement)) return !1;
+		let t = e.tagName;
+		return t === "INPUT" || t === "TEXTAREA" || t === "SELECT" ? !0 : e.isContentEditable;
+	}
+	focusSearchInput() {
+		let e = this.renderRoot?.querySelector("#so-search");
+		e && (e.focus(), e.select());
+	}
 	executeContextAction() {
 		if (!this.contextMenu) return;
 		let e = this.contextMenu.action;
@@ -3198,13 +3255,6 @@ var $ = class extends k {
 		this.mutateState((e) => {
 			e.settings.notesDialogViewMode = n;
 		});
-	}
-	notesDialogViewModeButtonText() {
-		switch (this.settings.notesDialogViewMode) {
-			case "markdown": return "View: Markdown only";
-			case "preview": return "View: Preview only";
-			default: return "View: Both";
-		}
 	}
 	persistNotesDialogSize(e, t) {
 		let n = this.clampNotesDialogWidth(e), r = this.clampNotesDialogHeight(t);
@@ -3392,7 +3442,7 @@ var $ = class extends k {
               @click=${() => this.cycleNotesDialogViewMode()}
               title="Cycle notes dialog view"
             >
-              ${this.notesDialogViewModeButtonText()}
+              Toggle view
             </button>
           </div>
           <div class=${r}>
@@ -3657,12 +3707,17 @@ var $ = class extends k {
                               </div>
                               <div class="meta">${t.type} - ${t.haId}</div>
                             </div>
-                            <button
-                              class="icon-button"
-                              @click=${() => this.removeObjectFromFolder(e.id, t.itemKey)}
-                            >
-                              ${this.renderIcon("mdi:close")}
-                            </button>
+                            ${this.pendingObjectDelete?.folderId === e.id && this.pendingObjectDelete?.itemKey === t.itemKey ? w`<button
+                                  class="icon-button confirm"
+                                  @click=${() => this.confirmObjectDelete()}
+                                >
+                                  ${this.renderIcon("mdi:check")}
+                                </button>` : w`<button
+                                  class="icon-button"
+                                  @click=${() => this.startObjectDeleteConfirmation(e.id, t.itemKey)}
+                                >
+                                  ${this.renderIcon("mdi:close")}
+                                </button>`}
                           </div>
                         `)}
                       ${this.folderObjects(e).length === 0 ? w`<div class="empty">No objects in this folder.</div>` : E}
@@ -4016,6 +4071,16 @@ var $ = class extends k {
       background: color-mix(in srgb, var(--error-color, #db4437) 18%, transparent);
     }
 
+    .icon-button.confirm {
+      color: var(--success-color, #43a047);
+      border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 45%, var(--line));
+      background: color-mix(in srgb, var(--success-color, #43a047) 10%, transparent);
+    }
+
+    .icon-button.confirm:hover {
+      background: color-mix(in srgb, var(--success-color, #43a047) 18%, transparent);
+    }
+
     .icon-button.info {
       color: var(--accent);
       border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
@@ -4295,6 +4360,10 @@ var $ = class extends k {
       line-height: 1.2;
     }
 
+    .notes-preview > :is(h1, h2, h3, h4, h5, h6):first-child {
+      margin-top: 0;
+    }
+
     .notes-preview p,
     .notes-preview ul,
     .notes-preview ol,
@@ -4465,7 +4534,7 @@ var $ = class extends k {
   `;
 	}
 };
-Z([ze({ attribute: !1 })], $.prototype, "hass", void 0), Z([ze({ attribute: !1 })], $.prototype, "runtime", void 0), Z([A()], $.prototype, "organizerState", void 0), Z([A()], $.prototype, "catalog", void 0), Z([A()], $.prototype, "loading", void 0), Z([A()], $.prototype, "errorText", void 0), Z([A()], $.prototype, "selectedFolderId", void 0), Z([A()], $.prototype, "selectedObjectIds", void 0), Z([A()], $.prototype, "lastSelectedItemKey", void 0), Z([A()], $.prototype, "search", void 0), Z([A()], $.prototype, "showSettings", void 0), Z([A()], $.prototype, "contextMenu", void 0), Z([A()], $.prototype, "folderDialog", void 0), Z([A()], $.prototype, "confirmDialog", void 0), Z([A()], $.prototype, "notesDialog", void 0), Z([A()], $.prototype, "dragTargetFolderId", void 0), Z([A()], $.prototype, "iframeDialogOpen", void 0), Z([A()], $.prototype, "iframeDialogUrl", void 0), $ = Q = Z([Ie("sanity-organizer")], $);
+Z([ze({ attribute: !1 })], $.prototype, "hass", void 0), Z([ze({ attribute: !1 })], $.prototype, "runtime", void 0), Z([A()], $.prototype, "organizerState", void 0), Z([A()], $.prototype, "catalog", void 0), Z([A()], $.prototype, "loading", void 0), Z([A()], $.prototype, "errorText", void 0), Z([A()], $.prototype, "selectedFolderId", void 0), Z([A()], $.prototype, "selectedObjectIds", void 0), Z([A()], $.prototype, "lastSelectedItemKey", void 0), Z([A()], $.prototype, "search", void 0), Z([A()], $.prototype, "showSettings", void 0), Z([A()], $.prototype, "contextMenu", void 0), Z([A()], $.prototype, "folderDialog", void 0), Z([A()], $.prototype, "confirmDialog", void 0), Z([A()], $.prototype, "notesDialog", void 0), Z([A()], $.prototype, "pendingObjectDelete", void 0), Z([A()], $.prototype, "dragTargetFolderId", void 0), Z([A()], $.prototype, "iframeDialogOpen", void 0), Z([A()], $.prototype, "iframeDialogUrl", void 0), $ = Q = Z([Ie("sanity-organizer")], $);
 //#endregion
 //#region src/main.ts
 var An = new En().resolveForBrowser();

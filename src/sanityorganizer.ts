@@ -118,6 +118,7 @@ export class SanityOrganizer extends LitElement {
   @state() private folderDialog: FolderDialogState | null = null;
   @state() private confirmDialog: ConfirmDialogState | null = null;
   @state() private notesDialog: NotesDialogState | null = null;
+  @state() private pendingObjectDelete: { folderId: string; itemKey: string } | null = null;
   @state() private dragTargetFolderId: string | null = null;
   @state() private iframeDialogOpen = false;
   @state() private iframeDialogUrl = "about:blank";
@@ -129,6 +130,7 @@ export class SanityOrganizer extends LitElement {
   private notesDialogInitialWidth = 0;
   private notesDialogInitialHeight = 0;
   private notesDialogHasUserResized = false;
+  private pendingObjectDeleteTimerId: number | null = null;
   private readonly stateCloner = new OrganizerStateCloner();
   private readonly treeService = new OrganizerTreeService();
   private readonly queryService = new HaItemQueryService();
@@ -147,6 +149,7 @@ export class SanityOrganizer extends LitElement {
     window.removeEventListener("keydown", this.onGlobalKeyDown);
     this.applyRefreshTimer(0);
     this.stopNotesDialogResizeTracking();
+    this.cancelObjectDeleteConfirmation();
   }
 
   protected override async updated(changedProps: Map<string, unknown>): Promise<void> {
@@ -577,6 +580,33 @@ export class SanityOrganizer extends LitElement {
     this.mutateState((draft) => {
       this.treeService.removeObjectFromFolder(draft, folderId, itemKey);
     });
+  }
+
+  private startObjectDeleteConfirmation(folderId: string, itemKey: string): void {
+    if (this.pendingObjectDeleteTimerId !== null) {
+      window.clearTimeout(this.pendingObjectDeleteTimerId);
+    }
+    this.pendingObjectDelete = { folderId, itemKey };
+    this.pendingObjectDeleteTimerId = window.setTimeout(() => {
+      this.cancelObjectDeleteConfirmation();
+    }, 2000);
+  }
+
+  private confirmObjectDelete(): void {
+    if (!this.pendingObjectDelete) {
+      return;
+    }
+    const { folderId, itemKey } = this.pendingObjectDelete;
+    this.cancelObjectDeleteConfirmation();
+    this.removeObjectFromFolder(folderId, itemKey);
+  }
+
+  private cancelObjectDeleteConfirmation(): void {
+    if (this.pendingObjectDeleteTimerId !== null) {
+      window.clearTimeout(this.pendingObjectDeleteTimerId);
+      this.pendingObjectDeleteTimerId = null;
+    }
+    this.pendingObjectDelete = null;
   }
 
   private editorPathFor(item: HaItem): string {
@@ -1618,12 +1648,20 @@ export class SanityOrganizer extends LitElement {
                               </div>
                               <div class="meta">${object.type} - ${object.haId}</div>
                             </div>
-                            <button
-                              class="icon-button"
-                              @click=${() => this.removeObjectFromFolder(selectedFolder.id, object.itemKey)}
-                            >
-                              ${this.renderIcon("mdi:close")}
-                            </button>
+                            ${this.pendingObjectDelete?.folderId === selectedFolder.id &&
+                            this.pendingObjectDelete?.itemKey === object.itemKey
+                              ? html`<button
+                                  class="icon-button confirm"
+                                  @click=${() => this.confirmObjectDelete()}
+                                >
+                                  ${this.renderIcon("mdi:check")}
+                                </button>`
+                              : html`<button
+                                  class="icon-button"
+                                  @click=${() => this.startObjectDeleteConfirmation(selectedFolder.id, object.itemKey)}
+                                >
+                                  ${this.renderIcon("mdi:close")}
+                                </button>`}
                           </div>
                         `,
                       )}
@@ -1979,6 +2017,16 @@ export class SanityOrganizer extends LitElement {
 
     .icon-button.danger:hover {
       background: color-mix(in srgb, var(--error-color, #db4437) 18%, transparent);
+    }
+
+    .icon-button.confirm {
+      color: var(--success-color, #43a047);
+      border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 45%, var(--line));
+      background: color-mix(in srgb, var(--success-color, #43a047) 10%, transparent);
+    }
+
+    .icon-button.confirm:hover {
+      background: color-mix(in srgb, var(--success-color, #43a047) 18%, transparent);
     }
 
     .icon-button.info {

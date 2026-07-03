@@ -37,6 +37,21 @@ Sanity Organizer is a Home Assistant custom panel that lets you organize Home As
 - Missing reference handling
 - Loading and error states
 
+## Keyboard Shortcuts
+
+Global shortcuts:
+
+- `/` Focus search input (when not typing in a field)
+- `Ctrl+K` / `Cmd+K` Focus and select search text
+- `Alt+Shift+N` Create child folder for selected folder
+- `Alt+Shift+I` Open notes dialog for selected folder
+
+Notes dialog shortcuts:
+
+- `Alt+Shift+T` Toggle notes view mode (markdown, preview, both)
+- `Esc` Close notes dialog
+- `Ctrl+Enter` / `Cmd+Enter` Save notes and close dialog
+
 ## Installation (HACS)
 
 1. Add this repository as a custom repository in HACS with category `Dashboard`.

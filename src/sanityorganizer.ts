@@ -138,11 +138,13 @@ export class SanityOrganizer extends LitElement {
   public connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener("click", this.onGlobalClick);
+    window.addEventListener("keydown", this.onGlobalKeyDown);
   }
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     this.removeEventListener("click", this.onGlobalClick);
+    window.removeEventListener("keydown", this.onGlobalKeyDown);
     this.applyRefreshTimer(0);
     this.stopNotesDialogResizeTracking();
   }
@@ -467,6 +469,18 @@ export class SanityOrganizer extends LitElement {
 
   private onNotesDialogKeyDown(event: KeyboardEvent): void {
     if (!this.notesDialog || event.isComposing) {
+      return;
+    }
+
+    if (
+      event.altKey
+      && event.shiftKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && event.key.toLowerCase() === "t"
+    ) {
+      event.preventDefault();
+      this.cycleNotesDialogViewMode();
       return;
     }
 
@@ -832,6 +846,113 @@ export class SanityOrganizer extends LitElement {
   private onGlobalClick = (): void => {
     if (this.contextMenu) {
       this.contextMenu = null;
+    }
+  };
+
+  private isTypingTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    const tag = target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+      return true;
+    }
+    return target.isContentEditable;
+  }
+
+  private focusSearchInput(): void {
+    const input = this.renderRoot?.querySelector<HTMLInputElement>("#so-search");
+    if (!input) {
+      return;
+    }
+    input.focus();
+    input.select();
+  }
+
+  private onGlobalKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || event.isComposing) {
+      return;
+    }
+
+    if (this.notesDialog) {
+      const fromNotesDialog = event.composedPath().some(
+        (node) => node instanceof HTMLElement && node.classList.contains("notes-dialog-card"),
+      );
+
+      if (!fromNotesDialog) {
+        const isNotesToggleShortcut =
+          event.altKey
+          && event.shiftKey
+          && !event.ctrlKey
+          && !event.metaKey
+          && event.key.toLowerCase() === "t";
+        if (isNotesToggleShortcut) {
+          event.preventDefault();
+          this.cycleNotesDialogViewMode();
+          return;
+        }
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          this.closeNotesDialog();
+          return;
+        }
+      }
+    }
+
+    if (
+      event.key === "Escape"
+      && event.target instanceof HTMLInputElement
+      && event.target.id === "so-search"
+    ) {
+      event.preventDefault();
+      event.target.select();
+      return;
+    }
+
+    const isTyping = this.isTypingTarget(event.target);
+
+    // '/' and Ctrl/Cmd+K focus and select search when not typing in a text field.
+    const isSearchSlash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey;
+    const isSearchChord =
+      (event.ctrlKey || event.metaKey)
+      && !event.altKey
+      && event.key.toLowerCase() === "k";
+    if (!isTyping && (isSearchSlash || isSearchChord)) {
+      event.preventDefault();
+      this.focusSearchInput();
+      return;
+    }
+
+    if (isTyping) {
+      return;
+    }
+
+    const isChildFolderShortcut =
+      event.altKey
+      && event.shiftKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && event.key.toLowerCase() === "n";
+    if (isChildFolderShortcut) {
+      event.preventDefault();
+      if (this.selectedFolderId) {
+        this.openAddFolderDialog(this.selectedFolderId);
+      }
+      return;
+    }
+
+    const isNotesShortcut =
+      event.altKey
+      && event.shiftKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && event.key.toLowerCase() === "i";
+    if (isNotesShortcut) {
+      event.preventDefault();
+      if (this.selectedFolderId) {
+        this.openNotesDialog(this.selectedFolderId);
+      }
     }
   };
 
